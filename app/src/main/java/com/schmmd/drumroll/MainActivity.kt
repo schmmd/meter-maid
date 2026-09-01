@@ -83,6 +83,7 @@ private fun Root() {
                 config = settings.meter,
                 onBack = { nav.popBackStack() },
                 onRetrySync = vm::exportNow,
+                onAddManual = { vm.startManualEntry() },
                 onDelete = vm::delete,
             )
         }

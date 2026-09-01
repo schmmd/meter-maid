@@ -121,6 +121,30 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    /**
+      * Opens the confirm screen with nothing filled in and no photo behind it.
+      *
+      * A reading taken while the phone was in the house, or one found written on the
+      * back of an envelope, still belongs in the log — and since the app owns the data
+      * and rewrites the whole spreadsheet, typing it into the sheet by hand would be
+      * overwritten on the next save.
+      */
+    fun startManualEntry() = viewModelScope.launch {
+        if (busy) return@launch
+        val config = settings.value.meter
+        val today = LocalDate.now()
+        pendingPhoto = null
+        _confirm.value = ConfirmState(
+            drums = " ".repeat(config.drumCount),
+            agreement = List(config.drumCount) { 0f },
+            readingDate = today,
+            capturedAt = today,
+            previous = repository.previousFor(config.meterId, today),
+            ocrSummary = "Entered by hand.",
+            photoPath = "",
+        )
+    }
+
     fun updateDrums(drums: String) {
         _confirm.value = _confirm.value?.copy(drums = drums)
     }
