@@ -32,45 +32,47 @@ full design note.
 
 ## Setup
 
-### 1. The spreadsheet
+There isn't any. No Google account, no OAuth, no Cloud project, no deployed script and
+no shared secret — readings go to a file through Android's Storage Access Framework, the
+same system picker you get from any "Save to…" sheet.
 
-Create a tab named `Readings` with this header row:
+In **Settings → Spreadsheet**:
+
+- **Choose a file…** — creates `well-readings.csv` wherever the picker offers. Pick
+  Google Drive to keep it in the cloud; local storage and Dropbox work identically.
+- **Use existing…** — point at a file you exported before and carry on appending to it.
+- **Save after every reading** — rewrites the whole file a few seconds after anything
+  changes. Access to the file is persisted, so this survives a restart.
+- **Save now** — writes immediately.
+
+Because access is granted per-file by the picker, the app declares no network permission
+at all.
+
+The file carries the columns the Apps Script version kept in the sheet:
 
 | id | date | reading | meter | source | note | change | days | gal/day |
 |----|------|---------|-------|--------|------|--------|------|---------|
 
-Put these three formulas in `G3`, `H3` and `I3` once — they spill down forever:
+`change`, `days` and `gal/day` used to be `ARRAYFORMULA`s living in the spreadsheet. A
+file in Drive is not a live sheet and has nowhere to host them, so they are computed on
+the way out instead — per meter, so swapping the meter starts a fresh series rather than
+rendering as one enormous negative jump.
 
-```
-G3: =ARRAYFORMULA(IF(C3:C="","", IF(D3:D<>D2:D, "new meter", C3:C - C2:C)))
-H3: =ARRAYFORMULA(IF(B3:B="","", B3:B - B2:B))
-I3: =ARRAYFORMULA(IF(B3:B="","", IF(D3:D<>D2:D, "", (C3:C-C2:C)/(B3:B-B2:B))))
-```
+> A CSV in Drive is a file, not a Google Sheet. Opening it with Sheets makes a *separate*
+> converted copy that the app does not write to; work from the CSV itself, or re-import
+> when you want to chart it.
 
-The `D3:D<>D2:D` guard stops a meter swap from rendering as a nonsensical negative.
-
-### 2. The endpoint
-
-Extensions → Apps Script, paste `apps-script/Code.gs`, set `SHEET_ID` and `SECRET`,
-then Deploy → New deployment → Web app → execute as *me*, access *Anyone*.
-
-Paste the deployment URL and the secret into the app's Settings screen.
-
-> The URL plus the secret is effectively a bearer token, and anything in an APK can be
-> extracted. Fine for a personal log — worst case is junk rows you can undo. Don't commit
-> the URL to a public repo.
-
-### 3. Build and install
+## Build and install
 
 ```sh
-export JAVA_HOME=$(brew --prefix openjdk@21)/libexec/openjdk.jdk/Contents/Home
+export JAVA_HOME=$(brew --prefix openjdk@17)
 ./gradlew assembleDebug
 adb install -r app/build/outputs/apk/debug/app-debug.apk
 ```
 
-### 4. First run
+## First run
 
-Grant camera access, then open Settings and set the endpoint. Back on the capture
+Grant camera access, then open Settings and pick a file to save to. Back on the capture
 screen, use the rotate button (↻) to match the guide rectangle to how the register
 actually sits in the crawlspace — half the archive photos have it running vertically.
 The angle is remembered.
@@ -81,10 +83,9 @@ The angle is remembered.
 app/src/main/java/com/schmmd/drumroll/
   data/        Room entity + DAO, MeterConfig, DataStore settings, Repository
   ocr/         MeterRecognizer interface, ML Kit implementation, Vote, FrameCapture
-  sync/        SheetsClient (Apps Script), SyncWorker (WorkManager)
+  backup/      SafFile (Storage Access Framework), ReadingsCsv, ExportCoordinator
   ui/          Capture, Confirm, History, Settings screens + MainViewModel
   util/        Validation rules
-apps-script/   The Google Sheets endpoint
 photos/        Meter photos (gitignored)
 ```
 
@@ -104,6 +105,6 @@ instead of *attempted* ones reported certainty in a wrong digit.
 
 ## Status
 
-Compiles clean, unit tests pass, debug APK builds. **Not yet run on a device** — no
-handset or emulator was attached when it was written, and the camera path in particular
-needs a real device pointed at the real meter.
+Compiles clean, unit tests pass, and the debug APK runs on a Pixel 10. The camera path
+has been exercised on-device; the recognizer's accuracy against the real meter in real
+light is still the open question.

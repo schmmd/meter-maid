@@ -23,8 +23,12 @@ data class Roi(
 )
 
 data class Settings(
-    val endpoint: String = "",
-    val secret: String = "",
+    /** SAF document the log is written to, as a string. Empty until one is picked. */
+    val exportUri: String = "",
+    val exportName: String = "",
+    val autoExport: Boolean = false,
+    val lastExport: String = "",
+    val lastExportHash: Int = 0,
     val meter: MeterConfig = MeterConfig(),
     val roi: Roi = Roi(),
     val ocrEnabled: Boolean = true,
@@ -34,9 +38,18 @@ class SettingsStore(private val context: Context) {
 
     val settings: Flow<Settings> = context.dataStore.data.map { p -> p.toSettings() }
 
-    suspend fun setEndpoint(url: String, secret: String) = context.dataStore.edit {
-        it[K_ENDPOINT] = url
-        it[K_SECRET] = secret
+    suspend fun setExportTarget(uri: String, name: String?) = context.dataStore.edit {
+        it[K_EXPORT_URI] = uri
+        it[K_EXPORT_NAME] = name.orEmpty()
+    }
+
+    suspend fun setAutoExport(enabled: Boolean) = context.dataStore.edit {
+        it[K_AUTO_EXPORT] = if (enabled) 1 else 0
+    }
+
+    suspend fun setLastExport(label: String, hash: Int?) = context.dataStore.edit {
+        it[K_LAST_EXPORT] = label
+        if (hash != null) it[K_LAST_HASH] = hash
     }
 
     suspend fun setRoi(roi: Roi) = context.dataStore.edit {
@@ -62,8 +75,11 @@ class SettingsStore(private val context: Context) {
     private fun Preferences.toSettings(): Settings {
         val defaults = MeterConfig()
         return Settings(
-            endpoint = this[K_ENDPOINT].orEmpty(),
-            secret = this[K_SECRET].orEmpty(),
+            exportUri = this[K_EXPORT_URI].orEmpty(),
+            exportName = this[K_EXPORT_NAME].orEmpty(),
+            autoExport = (this[K_AUTO_EXPORT] ?: 0) == 1,
+            lastExport = this[K_LAST_EXPORT].orEmpty(),
+            lastExportHash = this[K_LAST_HASH] ?: 0,
             meter = MeterConfig(
                 meterId = this[K_METER_ID] ?: defaults.meterId,
                 drumCount = this[K_DRUMS] ?: defaults.drumCount,
@@ -83,8 +99,11 @@ class SettingsStore(private val context: Context) {
     }
 
     private companion object {
-        val K_ENDPOINT = stringPreferencesKey("endpoint")
-        val K_SECRET = stringPreferencesKey("secret")
+        val K_EXPORT_URI = stringPreferencesKey("export_uri")
+        val K_EXPORT_NAME = stringPreferencesKey("export_name")
+        val K_AUTO_EXPORT = intPreferencesKey("auto_export")
+        val K_LAST_EXPORT = stringPreferencesKey("last_export")
+        val K_LAST_HASH = intPreferencesKey("last_export_hash")
         val K_METER_ID = stringPreferencesKey("meter_id")
         val K_DRUMS = intPreferencesKey("drums")
         val K_ZEROS = intPreferencesKey("zeros")

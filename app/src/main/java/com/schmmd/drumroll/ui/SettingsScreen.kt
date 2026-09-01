@@ -1,5 +1,8 @@
 package com.schmmd.drumroll.ui
 
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -11,19 +14,31 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.schmmd.drumroll.data.MeterConfig
+import com.schmmd.drumroll.backup.ReadingsCsv
 import com.schmmd.drumroll.data.Settings
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
     settings: Settings,
-    onSaveEndpoint: (String, String) -> Unit,
+    onChooseExportTarget: (Uri) -> Unit,
+    onToggleAutoExport: (Boolean) -> Unit,
+    onExportNow: () -> Unit,
     onSaveMeter: (MeterConfig) -> Unit,
     onToggleOcr: (Boolean) -> Unit,
     onBack: () -> Unit,
 ) {
-    var endpoint by remember(settings.endpoint) { mutableStateOf(settings.endpoint) }
-    var secret by remember(settings.secret) { mutableStateOf(settings.secret) }
+    // Creates a new spreadsheet file wherever the picker offers — Drive, local, Dropbox.
+    val createFile = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument(ReadingsCsv.MIME),
+    ) { uri -> uri?.let(onChooseExportTarget) }
+
+    // Anything, rather than text/csv: Drive lists files with unhelpful MIME types and a
+    // filtered picker hides the very file the user exported last time.
+    val openFile = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument(),
+    ) { uri -> uri?.let(onChooseExportTarget) }
+
     var drums by remember(settings.meter) { mutableStateOf(settings.meter.drumCount.toString()) }
     var zeros by remember(settings.meter) { mutableStateOf(settings.meter.trailingZeros.toString()) }
     var minDay by remember(settings.meter) { mutableStateOf(settings.meter.minPerDay.toInt().toString()) }
@@ -47,23 +62,57 @@ fun SettingsScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             Text("Spreadsheet", style = MaterialTheme.typography.titleSmall)
-            OutlinedTextField(
-                value = endpoint,
-                onValueChange = { endpoint = it },
-                label = { Text("Apps Script web app URL") },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true,
+            Text(
+                "Readings are written to one CSV file. Pick Google Drive in the system " +
+                    "picker to keep it in the cloud — no sign-in, no setup.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            OutlinedTextField(
-                value = secret,
-                onValueChange = { secret = it },
-                label = { Text("Shared secret") },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true,
-            )
-            Button(
-                onClick = { onSaveEndpoint(endpoint.trim(), secret.trim()) },
-            ) { Text("Save destination") }
+
+            if (settings.exportUri.isNotBlank()) {
+                LabelledValue("File", settings.exportName.ifBlank { "chosen" })
+            }
+            if (settings.lastExport.isNotBlank()) {
+                Text(
+                    settings.lastExport,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                Button(onClick = { createFile.launch(ReadingsCsv.FILE_NAME) }) {
+                    Text(if (settings.exportUri.isBlank()) "Choose a file…" else "New file…")
+                }
+                OutlinedButton(onClick = { openFile.launch(arrayOf("*/*")) }) {
+                    Text("Use existing…")
+                }
+            }
+
+            Row(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Column(Modifier.weight(1f)) {
+                    Text("Save after every reading", style = MaterialTheme.typography.bodyLarge)
+                    Text(
+                        "Rewrites the whole file a few seconds after anything changes.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                Switch(
+                    checked = settings.autoExport,
+                    onCheckedChange = onToggleAutoExport,
+                    enabled = settings.exportUri.isNotBlank(),
+                )
+            }
+
+            OutlinedButton(
+                onClick = onExportNow,
+                enabled = settings.exportUri.isNotBlank(),
+            ) { Text("Save now") }
 
             HorizontalDivider()
 

@@ -2,7 +2,6 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <uses-permission android:name="android.permission.CAMERA" />
-    <uses-permission android:name="android.permission.INTERNET" />
     <uses-feature android:name="android.hardware.camera.any" android:required="true" />
 
     <application
@@ -26,6 +25,5 @@
             </intent-filter>
         </activity>
 
-        <!-- WorkManager ships its own initializer; nothing to declare here. -->
     </application>
 </manifest>

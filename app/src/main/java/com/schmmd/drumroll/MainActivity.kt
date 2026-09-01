@@ -82,14 +82,16 @@ private fun Root() {
                 readings = readings,
                 config = settings.meter,
                 onBack = { nav.popBackStack() },
-                onRetrySync = vm::retrySync,
+                onRetrySync = vm::exportNow,
                 onDelete = vm::delete,
             )
         }
         composable("settings") {
             SettingsScreen(
                 settings = settings,
-                onSaveEndpoint = vm::saveEndpoint,
+                onChooseExportTarget = vm::chooseExportTarget,
+                onToggleAutoExport = vm::setAutoExport,
+                onExportNow = vm::exportNow,
                 onSaveMeter = vm::saveMeter,
                 onToggleOcr = vm::toggleOcr,
                 onBack = { nav.popBackStack() },

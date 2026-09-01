@@ -61,12 +61,9 @@ dependencies {
     implementation(libs.androidx.room.ktx)
     ksp(libs.androidx.room.compiler)
 
-    implementation(libs.androidx.work.runtime.ktx)
     implementation(libs.androidx.datastore.preferences)
     implementation(libs.accompanist.permissions)
 
     testImplementation(libs.junit)
-    // org.json is stubbed in Android unit tests; the real one lets SheetsClient run on the JVM.
-    testImplementation(libs.org.json)
     testImplementation(libs.kotlinx.coroutines.test)
 }

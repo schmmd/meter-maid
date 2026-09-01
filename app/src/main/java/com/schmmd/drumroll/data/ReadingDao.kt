@@ -28,8 +28,12 @@ interface ReadingDao {
     @Query("SELECT * FROM readings WHERE readingDate = :date AND meterId = :meterId LIMIT 1")
     suspend fun onDate(date: String, meterId: String): Reading?
 
-    @Query("SELECT * FROM readings WHERE sync IN ('QUEUED', 'FAILED') ORDER BY readingDate ASC")
-    suspend fun pending(): List<Reading>
+    @Query("SELECT * FROM readings")
+    suspend fun allOnce(): List<Reading>
+
+    /** The export rewrites the whole file, so rows move to [state] together or not at all. */
+    @Query("UPDATE readings SET sync = :state WHERE sync != :state")
+    suspend fun markAll(state: SyncState)
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsert(reading: Reading)

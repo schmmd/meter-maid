@@ -2,6 +2,7 @@ package com.schmmd.drumroll.ui
 
 import android.app.Application
 import android.graphics.Bitmap
+import android.net.Uri
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.schmmd.drumroll.DrumrollApp
@@ -177,10 +178,20 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
 
     fun delete(id: String) = viewModelScope.launch { repository.delete(id) }
 
-    fun retrySync() = repository.retrySync()
+    /** Writes the log to the chosen file right now. No-op until a file has been picked. */
+    fun exportNow() = viewModelScope.launch {
+        val target = settings.value.exportUri.takeIf { it.isNotBlank() } ?: return@launch
+        application.export.exportNow(Uri.parse(target))
+    }
 
-    fun saveEndpoint(url: String, secret: String) = viewModelScope.launch {
-        settingsStore.setEndpoint(url, secret)
+    /** The user picked a file in the system picker; adopt it and write to it immediately. */
+    fun chooseExportTarget(uri: Uri) = viewModelScope.launch {
+        application.export.setTarget(uri)
+    }
+
+    fun setAutoExport(enabled: Boolean) = viewModelScope.launch {
+        settingsStore.setAutoExport(enabled)
+        if (enabled) exportNow()
     }
 
     fun saveMeter(config: MeterConfig) = viewModelScope.launch { settingsStore.setMeter(config) }
