@@ -14,9 +14,7 @@ import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.FlipCameraAndroid
-import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -45,8 +43,8 @@ import java.util.concurrent.atomic.AtomicReference
 
 /**
  * The viewfinder, one tap from the home screen. Everything on it serves getting a
- * clean burst of the register; the corner shortcuts stay because a reading often
- * prompts a look at the log right after.
+ * clean burst of the register — the log and settings live on the home screen now,
+ * a back-press away, rather than crowding the corner of the frame.
  */
 @SuppressLint("UnsafeOptInUsageError")
 @Composable
@@ -54,8 +52,6 @@ fun CaptureScreen(
     roi: Roi,
     onFlipGuide: () -> Unit,
     onCaptured: (frames: List<Bitmap>) -> Unit,
-    onHistory: () -> Unit,
-    onSettings: () -> Unit,
 ) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -194,12 +190,6 @@ fun CaptureScreen(
         ) {
             IconButton(onClick = onFlipGuide) {
                 Icon(Icons.Default.FlipCameraAndroid, "Flip guide", tint = Color.White)
-            }
-            IconButton(onClick = onHistory) {
-                Icon(Icons.Default.History, "History", tint = Color.White)
-            }
-            IconButton(onClick = onSettings) {
-                Icon(Icons.Default.Settings, "Settings", tint = Color.White)
             }
         }
 

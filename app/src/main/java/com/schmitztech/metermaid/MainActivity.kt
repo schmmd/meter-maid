@@ -82,8 +82,6 @@ private fun Root() {
                 roi = settings.roi,
                 onFlipGuide = { vm.flipGuide() },
                 onCaptured = vm::onCaptured,
-                onHistory = { nav.navigate("history") },
-                onSettings = { nav.navigate("settings") },
             )
         }
         composable("history") {
