@@ -28,6 +28,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -37,6 +38,7 @@ import com.schmmd.drumroll.ocr.FrameCapture
 import kotlin.coroutines.resume
 import kotlinx.coroutines.suspendCancellableCoroutine
 import java.util.concurrent.Executors
+import java.util.concurrent.atomic.AtomicReference
 
 /**
  * The app's front door. Opens straight to the viewfinder — no home screen, no menu —
@@ -56,6 +58,8 @@ fun CaptureScreen(
     val frameBuffer = remember { FrameBuffer() }
     val executor = remember { Executors.newSingleThreadExecutor() }
     var previewView by remember { mutableStateOf<PreviewView?>(null) }
+    // Read from the analyzer thread every frame, so it is a holder rather than state.
+    val viewAspect = remember { AtomicReference(0f) }
 
     DisposableEffect(Unit) {
         onDispose {
@@ -86,7 +90,12 @@ fun CaptureScreen(
                 setAnalyzer(executor) { proxy ->
                     try {
                         val full = proxy.toBitmap()
-                        FrameCapture.cropToRoi(full, roi)?.let(frameBuffer::offer)
+                        FrameCapture.cropToRoi(
+                            source = full,
+                            roi = roi,
+                            sensorRotationDegrees = proxy.imageInfo.rotationDegrees,
+                            viewAspect = viewAspect.get(),
+                        )?.let(frameBuffer::offer)
                         if (!full.isRecycled) full.recycle()
                     } catch (_: Exception) {
                         // A dropped frame is not worth surfacing; the burst has four more.
@@ -113,7 +122,11 @@ fun CaptureScreen(
                     previewView = this
                 }
             },
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier
+                .fillMaxSize()
+                .onSizeChanged {
+                    viewAspect.set(if (it.height > 0) it.width.toFloat() / it.height else 0f)
+                },
         )
 
         // The guide rectangle. Everything outside it is discarded before OCR, which is
@@ -143,11 +156,18 @@ fun CaptureScreen(
             "Line the drums up inside the frame",
             color = Color.White.copy(alpha = 0.75f),
             fontSize = 14.sp,
-            modifier = Modifier.align(Alignment.TopCenter).padding(top = 48.dp),
+            // Clears the icon row (48dp) and the degrees readout tucked under it.
+            modifier = Modifier
+                .align(Alignment.TopCenter)
+                .statusBarsPadding()
+                .padding(top = 76.dp),
         )
 
         Row(
-            modifier = Modifier.align(Alignment.TopEnd).padding(16.dp),
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .statusBarsPadding()
+                .padding(horizontal = 8.dp),
             horizontalArrangement = Arrangement.spacedBy(4.dp),
         ) {
             IconButton(onClick = onRotateGuide) {
@@ -166,13 +186,17 @@ fun CaptureScreen(
             color = Color.White.copy(alpha = 0.6f),
             fontFamily = FontFamily.Monospace,
             fontSize = 12.sp,
-            modifier = Modifier.align(Alignment.TopEnd).padding(top = 64.dp, end = 20.dp),
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .statusBarsPadding()
+                .padding(top = 52.dp, end = 20.dp),
         )
 
         Box(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
-                .padding(bottom = 48.dp)
+                .navigationBarsPadding()
+                .padding(bottom = 24.dp)
                 .size(76.dp)
                 .clip(CircleShape)
                 .background(Color.White.copy(alpha = 0.25f)),
