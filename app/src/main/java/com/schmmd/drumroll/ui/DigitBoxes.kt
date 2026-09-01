@@ -21,6 +21,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.input.KeyboardType
@@ -83,10 +84,23 @@ fun DigitBoxes(
                     .border(if (ch == null) 2.dp else 1.dp, borderColor, RoundedCornerShape(4.dp)),
                 contentAlignment = Alignment.Center,
             ) {
+                val shown = ch?.toString().orEmpty()
                 BasicTextField(
-                    value = TextFieldValue(ch?.toString().orEmpty()),
+                    // Selected, not just present. With the default cursor-at-zero a
+                    // keypress lands *before* the digit already there, so correcting a
+                    // drum the recognizer got wrong was impossible: the box kept its
+                    // original value and swallowed the correction.
+                    value = TextFieldValue(shown, selection = TextRange(0, shown.length)),
                     onValueChange = { new ->
-                        val digit = new.text.lastOrNull()?.takeIf(Char::isDigit)
+                        val typed = new.text.filter(Char::isDigit)
+                        val digit = when {
+                            typed.isEmpty() -> null          // backspace clears the drum
+                            typed.length == 1 -> typed[0]
+                            // Belt and braces: if an IME manages to leave both the old
+                            // and the new character in the field, the new one is the one
+                            // that differs, whichever side it landed on.
+                            else -> typed.lastOrNull { it != ch } ?: typed.last()
+                        }
                         val padded = drums.padEnd(config.drumCount, ' ').toCharArray()
                         padded[i] = digit ?: ' '
                         onChange(String(padded))

@@ -2,6 +2,7 @@ package com.schmmd.drumroll.ui
 
 import android.annotation.SuppressLint
 import android.graphics.Bitmap
+import androidx.camera.core.Camera
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.Preview
@@ -9,6 +10,7 @@ import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
@@ -24,6 +26,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
@@ -60,6 +63,8 @@ fun CaptureScreen(
     var previewView by remember { mutableStateOf<PreviewView?>(null) }
     // Read from the analyzer thread every frame, so it is a holder rather than state.
     val viewAspect = remember { AtomicReference(0f) }
+    var camera by remember { mutableStateOf<Camera?>(null) }
+    var zoom by remember { mutableFloatStateOf(1f) }
 
     DisposableEffect(Unit) {
         onDispose {
@@ -106,12 +111,13 @@ fun CaptureScreen(
             }
 
         provider.unbindAll()
-        provider.bindToLifecycle(
+        camera = provider.bindToLifecycle(
             lifecycleOwner,
             CameraSelector.DEFAULT_BACK_CAMERA,
             preview,
             analysis,
         )
+        zoom = camera?.cameraInfo?.zoomState?.value?.zoomRatio ?: 1f
     }
 
     Box(Modifier.fillMaxSize().background(Color.Black)) {
@@ -126,6 +132,21 @@ fun CaptureScreen(
                 .fillMaxSize()
                 .onSizeChanged {
                     viewAspect.set(if (it.height > 0) it.width.toFloat() / it.height else 0f)
+                }
+                // On the preview rather than the whole screen, so the controls keep their
+                // own taps. Filling the guide box with the register is what the recognizer
+                // is most sensitive to, and in a crawlspace moving closer is not always an
+                // option.
+                .pointerInput(camera) {
+                    detectTransformGestures { _, _, pinch, _ ->
+                        val active = camera ?: return@detectTransformGestures
+                        val state = active.cameraInfo.zoomState.value
+                            ?: return@detectTransformGestures
+                        val next = (state.zoomRatio * pinch)
+                            .coerceIn(state.minZoomRatio, state.maxZoomRatio)
+                        active.cameraControl.setZoomRatio(next)
+                        zoom = next
+                    }
                 },
         )
 
@@ -179,6 +200,19 @@ fun CaptureScreen(
             IconButton(onClick = onSettings) {
                 Icon(Icons.Default.Settings, "Settings", tint = Color.White)
             }
+        }
+
+        if (zoom > 1.01f) {
+            Text(
+                String.format("%.1f\u00d7", zoom),
+                color = Color.White.copy(alpha = 0.75f),
+                fontFamily = FontFamily.Monospace,
+                fontSize = 13.sp,
+                modifier = Modifier
+                    .align(Alignment.BottomStart)
+                    .navigationBarsPadding()
+                    .padding(start = 24.dp, bottom = 40.dp),
+            )
         }
 
         Text(

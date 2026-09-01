@@ -167,8 +167,11 @@ internal fun LabelledValue(label: String, value: String) {
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun DateRow(date: LocalDate, onChange: (LocalDate) -> Unit) {
+    var picking by remember { mutableStateOf(false) }
+
     Row(
         Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
@@ -178,8 +181,38 @@ private fun DateRow(date: LocalDate, onChange: (LocalDate) -> Unit) {
             color = MaterialTheme.colorScheme.onSurfaceVariant)
         Row(verticalAlignment = Alignment.CenterVertically) {
             TextButton(onClick = { onChange(date.minusDays(1)) }) { Text("−1d") }
-            Text(date.toString(), fontFamily = FontFamily.Monospace)
+            // Nudging is right for "I photographed it last night"; a reading found on
+            // the back of an envelope needs a calendar, not thirty taps.
+            TextButton(onClick = { picking = true }) {
+                Text(date.toString(), fontFamily = FontFamily.Monospace)
+            }
             TextButton(onClick = { onChange(date.plusDays(1)) }) { Text("+1d") }
         }
     }
+
+    if (picking) {
+        val state = rememberDatePickerState(
+            initialSelectedDateMillis = date.toEpochDay() * MILLIS_PER_DAY,
+        )
+        DatePickerDialog(
+            onDismissRequest = { picking = false },
+            confirmButton = {
+                TextButton(onClick = {
+                    // The picker works in UTC midnights, so floorDiv gets the same day
+                    // back out whatever the phone's zone and whichever side of the epoch.
+                    state.selectedDateMillis?.let {
+                        onChange(LocalDate.ofEpochDay(Math.floorDiv(it, MILLIS_PER_DAY)))
+                    }
+                    picking = false
+                }) { Text("OK") }
+            },
+            dismissButton = {
+                TextButton(onClick = { picking = false }) { Text("Cancel") }
+            },
+        ) {
+            DatePicker(state = state)
+        }
+    }
 }
+
+private const val MILLIS_PER_DAY = 86_400_000L
