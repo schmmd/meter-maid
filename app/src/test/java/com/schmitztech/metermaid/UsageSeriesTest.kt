@@ -14,7 +14,7 @@ class UsageSeriesTest {
         Reading(
             id = "$date-$value-$at", readingDate = date,
             capturedAtUtc = Instant.parse(at).toEpochMilli(), value = value, meterId = meter,
-            ocrRaw = null, minAgreement = null, corrected = false, photoPath = "",
+            corrected = false, photoPath = "",
             note = "",
         )
 

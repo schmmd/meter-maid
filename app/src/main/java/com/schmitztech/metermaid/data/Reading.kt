@@ -21,8 +21,6 @@ data class Reading(
     val capturedAtUtc: Long,
     val value: Long,
     val meterId: String,
-    val ocrRaw: String?,           // what the recognizer returned, for auditing
-    val minAgreement: Float?,      // lowest per-digit agreement, 0..1
     val corrected: Boolean,        // did the user change a prefilled digit?
     val photoPath: String,
     val note: String,

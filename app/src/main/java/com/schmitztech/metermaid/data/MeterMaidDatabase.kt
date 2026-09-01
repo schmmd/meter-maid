@@ -6,11 +6,11 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 
 /**
- * Version 2 dropped the per-row sync columns. The only phone that ever held a version 1
- * database has been migrated, so the migration itself is gone rather than carried
- * forever — a fresh install creates version 2 directly.
+ * Version 2 dropped the per-row sync columns; version 3 dropped ocrRaw and minAgreement,
+ * which nothing ever read back. Migrations are not carried: the log's durable home is
+ * the exported CSV, so an upgrade rebuilds the database and the user re-imports.
  */
-@Database(entities = [Reading::class], version = 2, exportSchema = false)
+@Database(entities = [Reading::class], version = 3, exportSchema = false)
 abstract class MeterMaidDatabase : RoomDatabase() {
     abstract fun readings(): ReadingDao
 
@@ -23,7 +23,7 @@ abstract class MeterMaidDatabase : RoomDatabase() {
                     context.applicationContext,
                     MeterMaidDatabase::class.java,
                     "metermaid.db"
-                ).build().also { instance = it }
+                ).fallbackToDestructiveMigration().build().also { instance = it }
             }
     }
 }

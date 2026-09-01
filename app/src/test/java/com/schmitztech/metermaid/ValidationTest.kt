@@ -15,7 +15,7 @@ class ValidationTest {
 
     private fun reading(date: String, value: Long) = Reading(
         id = "x", readingDate = date, capturedAtUtc = 0L, value = value,
-        meterId = config.meterId, ocrRaw = null, minAgreement = null, corrected = false,
+        meterId = config.meterId, corrected = false,
         photoPath = "", note = "",
     )
 

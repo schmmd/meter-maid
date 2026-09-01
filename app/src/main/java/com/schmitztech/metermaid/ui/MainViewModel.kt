@@ -245,8 +245,6 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                 capturedAtUtc = Instant.now().toEpochMilli(),
                 value = config.toValue(drums),
                 meterId = config.meterId,
-                ocrRaw = state.ocrSummary,
-                minAgreement = state.agreement.minOrNull(),
                 corrected = corrected,
                 photoPath = pendingPhoto?.absolutePath.orEmpty(),
                 note = state.note,

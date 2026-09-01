@@ -17,7 +17,7 @@ class ReadingsCsvParseTest {
     private fun reading(date: String, value: Long, at: String, note: String = "", meter: String = "well") =
         Reading(
             id = "ignored", readingDate = date, capturedAtUtc = Instant.parse(at).toEpochMilli(),
-            value = value, meterId = meter, ocrRaw = null, minAgreement = null,
+            value = value, meterId = meter,
             corrected = false, photoPath = "1756654321.jpg", note = note,
         )
 

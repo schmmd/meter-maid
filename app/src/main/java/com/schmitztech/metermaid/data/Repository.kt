@@ -59,8 +59,6 @@ class Repository(private val context: Context) {
                     capturedAtUtc = row.capturedAtUtc,
                     value = row.value,
                     meterId = row.meterId,
-                    ocrRaw = "Imported from a spreadsheet.",
-                    minAgreement = null,
                     corrected = row.corrected,
                     // The name is kept even though the file is not here: it still ties
                     // the row to its frame if the photos are ever restored alongside.

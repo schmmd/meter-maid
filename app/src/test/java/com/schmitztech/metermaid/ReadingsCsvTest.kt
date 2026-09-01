@@ -30,8 +30,6 @@ class ReadingsCsvTest {
         capturedAtUtc = Instant.parse(at).toEpochMilli(),
         value = value,
         meterId = meter,
-        ocrRaw = null,
-        minAgreement = null,
         corrected = false,
         photoPath = photoPath,
         note = note,

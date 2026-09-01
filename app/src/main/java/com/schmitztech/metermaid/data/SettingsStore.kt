@@ -2,6 +2,7 @@ package com.schmitztech.metermaid.data
 
 import android.content.Context
 import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.doublePreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.floatPreferencesKey
@@ -45,7 +46,7 @@ class SettingsStore(private val context: Context) {
     }
 
     suspend fun setAutoExport(enabled: Boolean) = context.dataStore.edit {
-        it[K_AUTO_EXPORT] = if (enabled) 1 else 0
+        it[K_AUTO_EXPORT] = enabled
     }
 
     suspend fun setLastExport(label: String, hash: Int?) = context.dataStore.edit {
@@ -75,7 +76,7 @@ class SettingsStore(private val context: Context) {
     }
 
     suspend fun setOcrEnabled(enabled: Boolean) = context.dataStore.edit {
-        it[K_OCR] = if (enabled) 1 else 0
+        it[K_OCR] = enabled
     }
 
     private fun Preferences.toSettings(): Settings {
@@ -83,7 +84,7 @@ class SettingsStore(private val context: Context) {
         return Settings(
             exportUri = this[K_EXPORT_URI].orEmpty(),
             exportName = this[K_EXPORT_NAME].orEmpty(),
-            autoExport = (this[K_AUTO_EXPORT] ?: 0) == 1,
+            autoExport = this[K_AUTO_EXPORT] ?: false,
             lastExport = this[K_LAST_EXPORT].orEmpty(),
             lastImport = this[K_LAST_IMPORT].orEmpty(),
             lastExportHash = this[K_LAST_HASH] ?: 0,
@@ -102,14 +103,17 @@ class SettingsStore(private val context: Context) {
                 // Only 0 and 180 are offered now; an older 90/270 snaps to upright.
                 rotationDegrees = if (this[K_ROI_ROT] == 180) 180 else 0,
             ),
-            ocrEnabled = (this[K_OCR] ?: 1) == 1,
+            ocrEnabled = this[K_OCR] ?: true,
         )
     }
 
     private companion object {
         val K_EXPORT_URI = stringPreferencesKey("export_uri")
         val K_EXPORT_NAME = stringPreferencesKey("export_name")
-        val K_AUTO_EXPORT = intPreferencesKey("auto_export")
+        // Renamed from the int-typed "auto_export"/"ocr_enabled": DataStore throws when
+        // a key changes type in place, so the old names are simply abandoned and the two
+        // toggles fall back to their defaults once.
+        val K_AUTO_EXPORT = booleanPreferencesKey("auto_export_enabled")
         val K_LAST_EXPORT = stringPreferencesKey("last_export")
         val K_LAST_IMPORT = stringPreferencesKey("last_import")
         val K_LAST_HASH = intPreferencesKey("last_export_hash")
@@ -123,6 +127,6 @@ class SettingsStore(private val context: Context) {
         val K_ROI_W = floatPreferencesKey("roi_w")
         val K_ROI_H = floatPreferencesKey("roi_h")
         val K_ROI_ROT = intPreferencesKey("roi_rot")
-        val K_OCR = intPreferencesKey("ocr_enabled")
+        val K_OCR = booleanPreferencesKey("ocr_prefill_enabled")
     }
 }
