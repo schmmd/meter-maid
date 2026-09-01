@@ -33,11 +33,28 @@ any of it was written. What that testing found:
   zero — it is part of the register face — so requiring exactly `drumCount` threw good
   frames away. A trailing run matching the painted zeros is now stripped instead.
 
-The honest limit, measured 2026-08-31: with all of the above fixed, ML Kit still returns
-`lölASI6E` and `lö1251680` for a register plainly reading `045694`. The digits sit on
-rotating drums split by black separator lines, and the Latin model reads them as letters.
-The pipeline no longer throws away good frames, but it cannot correct a bad transcription
-— which is why prefill is gated on cross-frame agreement and every drum stays editable.
+### Choosing the engine
+
+Three engines were measured against photographs of this meter on 2026-08-31:
+
+| Engine | Read of a register showing `045694` |
+|--------|-------------------------------------|
+| ML Kit (bundled Latin) | `lölASI6E`, `lö1251680` — letters, no usable digits |
+| Tesseract 5 + digit whitelist | `560` from a clean, isolated, upscaled strip |
+| **PP-OCRv4 (ONNX)** | **`1014516940` → `0456940` after drum assignment** |
+
+ML Kit has no way to express a character whitelist, so nothing stops it choosing letters.
+Tesseract binarises with a global threshold, which this face defeats by being
+dark-on-light and light-on-dark at once — the same reason preprocessing failed above.
+
+PP-OCRv4 reads the digits but reads the black bars *between* drums as `1`s, returning ten
+characters for a seven-digit face. Dropping `1`s would also drop a drum genuinely showing
+one, so position decides instead: a separator falls between two cell centres and loses to
+the digit beside it, while a real `1` sits on a centre and wins.
+
+The remaining honest limit is the mid-roll drum, which no general-purpose recognizer will
+resolve — which is why prefill is still gated on cross-frame agreement and every drum
+stays editable.
 
 Hence the design: OCR prefills only the drums that several independent frames agreed on,
 and leaves anything else blank and focused rather than guessing. See `docs/` for the
@@ -100,15 +117,15 @@ register from the far side of the pit. The setting is remembered.
 ```
 app/src/main/java/com/schmmd/drumroll/
   data/        Room entity + DAO, MeterConfig, DataStore settings, Repository
-  ocr/         MeterRecognizer interface, ML Kit implementation, Vote, FrameCapture
+  ocr/         MeterRecognizer interface, PP-OCRv4 implementation, Vote, FrameCapture
   backup/      SafFile (Storage Access Framework), ReadingsCsv, ExportCoordinator
   ui/          Capture, Confirm, History, Settings screens + MainViewModel
   util/        Validation rules
 photos/        Meter photos (gitignored)
 ```
 
-`MeterRecognizer` is a one-method interface. If on-device OCR turns out not to earn its
-keep, a cloud implementation drops in behind it without touching anything else.
+`MeterRecognizer` is a one-method interface. It has already earned its keep once: ML Kit
+was swapped out for PP-OCRv4 behind it without any other file changing shape.
 
 ## Tests
 
@@ -116,8 +133,8 @@ keep, a cloud implementation drops in behind it without touching anything else.
 ./gradlew testDebugUnitTest
 ```
 
-31 tests covering the vote, the register arithmetic, the validation rules and the
-derived spreadsheet columns. The vote
+33 tests covering the burst vote, the register arithmetic, the validation rules, the
+derived spreadsheet columns and the drum assignment. The vote
 cases are transcribed from real OCR output on the meter photos — including the jitter
 burst that caught a false-confidence bug: dividing agreement by *surviving* frames
 instead of *attempted* ones reported certainty in a wrong digit.

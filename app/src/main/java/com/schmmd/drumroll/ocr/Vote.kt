@@ -1,48 +1,23 @@
 package com.schmmd.drumroll.ocr
 
 /**
- * Positional majority vote across frames.
+ * Cross-frame agreement, and the painted-zero arithmetic that goes with it.
  *
- * Two details here are load-bearing, both found by testing against real photos of the
- * meter rather than by reasoning:
- *
- *  1. Frames arrive fragmented. A frame that came back as "324" + "442" is a *good*
- *     frame; sorting fragments by x and concatenating recovers roughly half of what a
- *     naive length filter throws away.
- *
- *  2. Agreement divides by frames *attempted*, not frames that survived the length
- *     filter. Dividing by survivors is how you get "2 of 2 agree, therefore certain"
- *     out of a burst where 8 of 10 frames were unreadable — which is exactly the
- *     false confidence that made the earlier version of this report a wrong digit at
- *     full agreement.
+ * Nothing here knows which engine produced the readings: each frame arrives already
+ * reduced to a digit string, and what survives is what several independent frames of the
+ * same burst agreed on.
  */
 object Vote {
 
     const val MIN_USABLE_FRAMES = 3
 
-    /** Fraction of the tallest fragment's height a fragment must reach to count. */
-    const val MIN_HEIGHT_RATIO = 0.6f
-
-    fun tally(
-        frames: List<List<Fragment>>,
-        drumCount: Int,
-        trailingZeros: Int = 0,
-        engine: String = "mlkit-v2",
-        minUsableFrames: Int = MIN_USABLE_FRAMES,
-    ): RecognizedReading? {
-        val attempted = frames.size
-        if (attempted == 0) return null
-
-        val usable = frames
-            .map { frame -> assemble(frame) }
-            .mapNotNull { rotatingDrumsOf(it, drumCount, trailingZeros) }
-        return tallyReadings(usable, attempted, drumCount, engine, minUsableFrames)
-    }
-
     /**
-     * The same vote over frames that have already been reduced to a digit string. PP-OCR
-     * resolves a whole register per frame rather than a bag of fragments, but the
-     * cross-frame agreement it is gated on is identical.
+     * Positional majority vote across the frames of one burst.
+     *
+     * [attempted] is the size of the whole burst, not of [usable]. Dividing agreement by
+     * the frames that survived is how you get "2 of 2 agree, therefore certain" out of a
+     * burst where 8 of 10 were unreadable — exactly the false confidence that made an
+     * earlier version of this report a wrong digit at full agreement.
      */
     fun tallyReadings(
         usable: List<String>,
@@ -73,25 +48,6 @@ object Vote {
             framesAttempted = attempted,
             framesUsable = usable.size,
         )
-    }
-
-    /**
-     * Rebuild one frame's fragments into a single digit string, left to right.
-     *
-     * Only fragments close to the tallest are kept. Measured on the real crop, the
-     * register comes back 56-65px tall while the dial numerals, "GALLON" and the "5/8"
-     * pipe marking are all 14-27px — so height separates the register from the face it
-     * is printed on almost perfectly, and without it those get concatenated into the
-     * reading and push every frame past the length check.
-     */
-    fun assemble(frame: List<Fragment>): String {
-        if (frame.isEmpty()) return ""
-        val tallest = frame.maxOf { it.boxHeight }
-        return frame
-            .filter { tallest == 0 || it.boxHeight >= tallest * MIN_HEIGHT_RATIO }
-            .sortedBy { it.boxLeft }
-            .joinToString("") { it.text }
-            .filter(Char::isDigit)
     }
 
     /**

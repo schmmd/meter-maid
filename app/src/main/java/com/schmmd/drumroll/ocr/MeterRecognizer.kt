@@ -2,13 +2,6 @@ package com.schmmd.drumroll.ocr
 
 import android.graphics.Bitmap
 
-/**
- * One text fragment the recognizer returned, with enough geometry to put it back in
- * order. ML Kit routinely splits a register into pieces ("324" + "442"); [boxLeft]
- * is what lets us reassemble rather than discard.
- */
-data class Fragment(val text: String, val boxLeft: Int, val boxHeight: Int = 0)
-
 data class RecognizedReading(
     /** Best digit per position. Positions below threshold are still filled here; */
     /** [agreement] is what decides whether the UI actually prefills them. */
@@ -22,7 +15,9 @@ data class RecognizedReading(
 
 interface MeterRecognizer {
     /**
-     * @param frames already cropped to the register, rotated upright and upscaled.
+     * @param frames already cropped to the guide box, rotated upright and upscaled.
+     * @param trailingZeros painted zeros on the face, which the recognizer sees but
+     *   which never turn, so they are stripped rather than reported.
      * @return null when too few frames were legible to say anything honest.
      */
     suspend fun read(frames: List<Bitmap>, drumCount: Int, trailingZeros: Int): RecognizedReading?
