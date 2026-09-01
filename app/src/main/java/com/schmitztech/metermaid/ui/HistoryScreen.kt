@@ -97,7 +97,7 @@ private fun ReadingRow(
 ) {
     val reading = interval.reading
     val subtitle = when {
-        interval.delta == null -> if (reading.corrected) "corrected" else "ocr"
+        interval.delta == null -> null // no predecessor, nothing to say
         interval.perDay != null -> "+${interval.delta} · ${interval.perDay.toLong()} gal/day"
         else -> "+${interval.delta} · same day"
     }
@@ -116,8 +116,10 @@ private fun ReadingRow(
                 "${reading.readingDate}  ${reading.timeOfDay()}",
                 style = MaterialTheme.typography.bodyLarge,
             )
-            Text(subtitle, style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant)
+            subtitle?.let {
+                Text(it, style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
         }
         Text(
             config.display(reading.value),
