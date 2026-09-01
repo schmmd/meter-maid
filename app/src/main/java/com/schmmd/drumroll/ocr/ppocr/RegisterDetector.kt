@@ -26,15 +26,30 @@ class RegisterDetector(private val models: PpOcrModels) {
                     (output[0].value as Array<Array<Array<FloatArray>>>)[0][0]
                 }
             }
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            android.util.Log.w("DrumrollOcr", "detector failed", e)
             return null
         } finally {
             if (scaled !== source) scaled.recycle()
         }
 
-        val box = largestBlob(probability) ?: return null
         val mapH = probability.size
         val mapW = probability[0].size
+        var maxProb = 0f
+        var above = 0
+        for (row in probability) for (v in row) {
+            if (v > maxProb) maxProb = v
+            if (v > THRESHOLD) above++
+        }
+        val box = largestBlob(probability)
+        android.util.Log.i(
+            "DrumrollOcr",
+            "det map ${mapW}x${mapH} maxProb=$maxProb above=$above blob=$box",
+        )
+        if (box == null) {
+            android.util.Log.w("DrumrollOcr", "no blob above threshold in det map")
+            return null
+        }
 
         // DB is trained on shrunk regions, so the blob is tighter than the text. Grow it
         // back, more vertically than horizontally: clipping a digit's top or bottom costs
@@ -43,12 +58,17 @@ class RegisterDetector(private val models: PpOcrModels) {
         val growY = (box.height() + 1) * GROW_Y
         val scaleX = source.width.toFloat() / mapW
         val scaleY = source.height.toFloat() / mapH
-        return Rect(
+        val mapped = Rect(
             ((box.left - growX) * scaleX).toInt().coerceIn(0, source.width - 1),
             ((box.top - growY) * scaleY).toInt().coerceIn(0, source.height - 1),
             ((box.right + growX) * scaleX).toInt().coerceIn(1, source.width),
             ((box.bottom + growY) * scaleY).toInt().coerceIn(1, source.height),
-        ).takeIf { it.width() >= 16 && it.height() >= 8 }
+        )
+        if (mapped.width() < 16 || mapped.height() < 8) {
+            android.util.Log.w("DrumrollOcr", "box too small after mapping: $mapped")
+            return null
+        }
+        return mapped
     }
 
     /** Resize so the short side reaches [MIN_SIDE], with both sides a multiple of 32. */

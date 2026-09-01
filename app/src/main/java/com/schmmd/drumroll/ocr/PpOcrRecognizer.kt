@@ -2,6 +2,7 @@ package com.schmmd.drumroll.ocr
 
 import android.content.Context
 import android.graphics.Bitmap
+import android.util.Log
 import com.schmmd.drumroll.ocr.ppocr.DigitRecognizer
 import com.schmmd.drumroll.ocr.ppocr.DrumAssignment
 import com.schmmd.drumroll.ocr.ppocr.PpOcrModels
@@ -24,7 +25,9 @@ class PpOcrRecognizer(context: Context) : MeterRecognizer {
 
     private val appContext = context.applicationContext
     private val models: PpOcrModels? by lazy {
-        runCatching { PpOcrModels.load(appContext) }.getOrNull()
+        runCatching { PpOcrModels.load(appContext) }
+            .onFailure { Log.w(TAG, "could not load the PP-OCR models", it) }
+            .getOrNull()
     }
     private val detector: RegisterDetector? by lazy { models?.let(::RegisterDetector) }
     private val recognizer: DigitRecognizer? by lazy { models?.let(::DigitRecognizer) }
@@ -35,15 +38,23 @@ class PpOcrRecognizer(context: Context) : MeterRecognizer {
         trailingZeros: Int,
     ): RecognizedReading? = withContext(Dispatchers.Default) {
         if (frames.isEmpty()) return@withContext null
-        val detect = detector ?: return@withContext null
-        val recognise = recognizer ?: return@withContext null
+        val detect = detector
+        val recognise = recognizer
+        if (detect == null || recognise == null) {
+            Log.w(TAG, "models unavailable — see the load failure above")
+            return@withContext null
+        }
 
         // Every digit on the face, painted zeros included: the guide box always contains
         // them and the recognizer has no way to know they never turn.
         val cells = drumCount + trailingZeros
 
         val readings = frames.mapNotNull { frame ->
-            val box = detect.detect(frame) ?: return@mapNotNull null
+            val box = detect.detect(frame)
+            if (box == null) {
+                Log.w(TAG, "frame ${frame.width}x${frame.height}: no register detected")
+                return@mapNotNull null
+            }
             val strip = runCatching {
                 Bitmap.createBitmap(frame, box.left, box.top, box.width(), box.height())
             }.getOrNull() ?: return@mapNotNull null
@@ -52,12 +63,23 @@ class PpOcrRecognizer(context: Context) : MeterRecognizer {
                 recognise.read(strip)
             } finally {
                 if (strip !== frame) strip.recycle()
-            } ?: return@mapNotNull null
+            }
+            if (decoded == null) {
+                Log.w(TAG, "frame: recognizer returned nothing for box $box")
+                return@mapNotNull null
+            }
 
-            DrumAssignment.assign(decoded.hits, decoded.timesteps, cells)
-                ?.let { Vote.rotatingDrumsOf(it, drumCount, trailingZeros) }
+            val assigned = DrumAssignment.assign(decoded.hits, decoded.timesteps, cells)
+            val drums = assigned?.let { Vote.rotatingDrumsOf(it, drumCount, trailingZeros) }
+            Log.i(
+                TAG,
+                "box=$box strip=${box.width()}x${box.height()} T=${decoded.timesteps} " +
+                    "raw='${decoded.raw}' assigned='$assigned' drums='$drums'",
+            )
+            drums
         }
 
+        Log.i(TAG, "burst: ${readings.size} of ${frames.size} frames usable $readings")
         Vote.tallyReadings(readings, frames.size, drumCount, engine = ENGINE)
     }
 
@@ -67,5 +89,6 @@ class PpOcrRecognizer(context: Context) : MeterRecognizer {
 
     private companion object {
         const val ENGINE = "ppocrv4"
+        const val TAG = "DrumrollOcr"
     }
 }

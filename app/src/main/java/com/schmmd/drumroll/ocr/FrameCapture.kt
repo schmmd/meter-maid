@@ -86,8 +86,19 @@ class FrameBuffer(private val capacity: Int = FrameCapture.BUFFER_SIZE) {
         while (frames.size > capacity) frames.removeFirst().recycle()
     }
 
+    /**
+     * Copies of the current frames, which the caller owns and must recycle.
+     *
+     * Handing out the originals is a trap: the analyzer keeps running after the shutter
+     * and recycles whatever it evicts, so a burst of five is freed within a few tenths
+     * of a second while recognition is still busy with it. That surfaced as every frame
+     * failing to scale — a recycled bitmap cannot be — and read as "no register found".
+     */
     @Synchronized
-    fun snapshot(): List<Bitmap> = frames.toList()
+    fun snapshot(): List<Bitmap> = frames.mapNotNull { frame ->
+        if (frame.isRecycled) null
+        else runCatching { frame.copy(frame.config ?: Bitmap.Config.ARGB_8888, false) }.getOrNull()
+    }
 
     @Synchronized
     fun clear() {

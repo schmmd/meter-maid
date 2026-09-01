@@ -59,6 +59,11 @@ class PpOcrModels private constructor(
             }
             val det = env.createSession(context.assets.open(DET_ASSET).use { it.readBytes() }, options)
             val rec = env.createSession(context.assets.open(REC_ASSET).use { it.readBytes() }, options)
+            android.util.Log.i(
+                "DrumrollOcr",
+                "models loaded det_in=${det.inputNames} det_out=${det.outputInfo.keys} " +
+                    "rec_in=${rec.inputNames} rec_out=${rec.outputInfo.keys}",
+            )
             // Index 0 is the CTC blank; the trailing space is PaddleOCR's convention.
             val chars = rec.metadata.customMetadata["character"]
                 ?.split("\n")

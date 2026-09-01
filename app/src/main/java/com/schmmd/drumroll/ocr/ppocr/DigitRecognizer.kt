@@ -33,7 +33,8 @@ class DigitRecognizer(private val models: PpOcrModels) {
                     (output[0].value as Array<Array<FloatArray>>)[0]
                 }
             }
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            android.util.Log.w("DrumrollOcr", "recognizer failed", e)
             return null
         } finally {
             if (prepared !== strip) prepared.recycle()

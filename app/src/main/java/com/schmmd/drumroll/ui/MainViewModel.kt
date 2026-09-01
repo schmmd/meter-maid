@@ -67,9 +67,8 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         val current = settings.value
         val config = current.meter
 
-        // Copied here, on the caller's thread: the analyzer keeps filling the ring
-        // buffer after the shutter and recycles what it evicts, so the frame has to be
-        // taken out of harm's way before the coroutine gets a chance to run.
+        // snapshot() already handed us copies the analyzer cannot recycle underneath us,
+        // so the photo only needs one of its own because persist() consumes what it saves.
         val keepsake = frames.lastOrNull()
             ?.takeIf { !it.isRecycled }
             ?.let { runCatching { it.copy(it.config ?: Bitmap.Config.ARGB_8888, false) }.getOrNull() }
@@ -78,9 +77,19 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             val today = LocalDate.now()
             pendingPhoto = keepsake?.let { persist(it) }
 
+            android.util.Log.i(
+                "DrumrollOcr",
+                "shutter: frames=${frames.size} ocrEnabled=${current.ocrEnabled} " +
+                    "sizes=${frames.map { "${it.width}x${it.height}" }}",
+            )
             val recognized = if (current.ocrEnabled && frames.isNotEmpty()) {
-                runCatching { recognizer.read(frames, config.drumCount, config.trailingZeros) }.getOrNull()
+                runCatching { recognizer.read(frames, config.drumCount, config.trailingZeros) }
+                    .onFailure { android.util.Log.w("DrumrollOcr", "recognition threw", it) }
+                    .getOrNull()
             } else null
+
+            // The burst is ours to free: snapshot() copied it for exactly this reason.
+            frames.forEach { if (!it.isRecycled) it.recycle() }
 
             // Only positions the burst actually agreed on are prefilled. A blank box is
             // an honest "I don't know"; a guessed digit is not.

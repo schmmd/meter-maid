@@ -203,7 +203,11 @@ fun CaptureScreen(
             contentAlignment = Alignment.Center,
         ) {
             Surface(
-                onClick = { onCaptured(frameBuffer.snapshot()) },
+                onClick = {
+                    val burst = frameBuffer.snapshot()
+                    android.util.Log.i("DrumrollOcr", "shutter pressed: buffer holds ${burst.size}")
+                    onCaptured(burst)
+                },
                 shape = CircleShape,
                 color = Color.White,
                 modifier = Modifier.size(60.dp),
