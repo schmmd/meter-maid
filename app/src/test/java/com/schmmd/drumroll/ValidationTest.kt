@@ -76,4 +76,16 @@ class ValidationTest {
         )
         assertTrue(issues.any { it.message.contains("days from when the photo") })
     }
+
+    @Test
+    fun `a reading typed in by hand is not measured against a photo that does not exist`() {
+        val issues = Validation.check(
+            drums = "324444",
+            readingDate = LocalDate.parse("2025-08-20"),
+            capturedAt = null,
+            previous = null,
+            config = config,
+        )
+        assertTrue(issues.none { it.message.contains("photo") })
+    }
 }

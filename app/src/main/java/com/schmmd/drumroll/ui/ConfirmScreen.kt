@@ -24,7 +24,8 @@ data class ConfirmState(
     val drums: String,
     val agreement: List<Float>,
     val readingDate: LocalDate,
-    val capturedAt: LocalDate,
+    /** The day the burst was taken, or null when the reading was typed in by hand. */
+    val capturedAt: LocalDate?,
     val note: String = "",
     val previous: Reading? = null,
     val ocrSummary: String? = null,

@@ -147,7 +147,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             drums = " ".repeat(config.drumCount),
             agreement = List(config.drumCount) { 0f },
             readingDate = today,
-            capturedAt = today,
+            capturedAt = null,
             previous = repository.previousFor(config.meterId, today),
             ocrSummary = "Entered by hand.",
             photoPath = "",

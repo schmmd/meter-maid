@@ -21,7 +21,8 @@ object Validation {
     fun check(
         drums: String,
         readingDate: LocalDate,
-        capturedAt: LocalDate,
+        /** When the photo was taken, or null for a reading typed in by hand. */
+        capturedAt: LocalDate?,
         previous: Reading?,
         config: MeterConfig,
     ): List<Issue> {
@@ -55,9 +56,15 @@ object Validation {
             }
         }
 
-        val drift = abs(ChronoUnit.DAYS.between(capturedAt, readingDate))
-        if (drift > 7) {
-            issues += Issue(Severity.WARN, "The date is $drift days from when the photo was taken.")
+        // Only meaningful against a photo. A reading entered by hand is *expected* to
+        // be about a day the phone was nowhere near the meter, so measuring its date
+        // against today and calling that drift is telling the user off for doing the
+        // thing the screen exists for.
+        if (capturedAt != null) {
+            val drift = abs(ChronoUnit.DAYS.between(capturedAt, readingDate))
+            if (drift > 7) {
+                issues += Issue(Severity.WARN, "The date is $drift days from when the photo was taken.")
+            }
         }
 
         return issues
