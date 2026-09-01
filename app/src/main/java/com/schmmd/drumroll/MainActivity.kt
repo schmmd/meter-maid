@@ -84,8 +84,13 @@ private fun Root() {
                 onBack = { nav.popBackStack() },
                 onRetrySync = vm::exportNow,
                 onAddManual = { vm.startManualEntry() },
+                onChart = { nav.navigate("chart") },
+                onEdit = { vm.startEdit(it) },
                 onDelete = vm::delete,
             )
+        }
+        composable("chart") {
+            UsageChartScreen(readings = readings, onBack = { nav.popBackStack() })
         }
         composable("settings") {
             SettingsScreen(

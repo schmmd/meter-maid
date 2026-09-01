@@ -122,7 +122,7 @@ app/src/main/java/com/schmmd/drumroll/
   data/        Room entity + DAO, MeterConfig, DataStore settings, Repository
   ocr/         MeterRecognizer interface, PP-OCRv4 implementation, Vote, FrameCapture
   backup/      SafFile (Storage Access Framework), ReadingsCsv, ExportCoordinator
-  ui/          Capture, Confirm, History, Settings screens + MainViewModel
+  ui/          Capture, Confirm, History, Chart, Settings screens + MainViewModel
   util/        Validation rules
 photos/        Meter photos (gitignored)
 ```
@@ -136,8 +136,8 @@ was swapped out for PP-OCRv4 behind it without any other file changing shape.
 ./gradlew testDebugUnitTest
 ```
 
-42 tests covering the burst vote, the register arithmetic, the validation rules, the
-spreadsheet columns in both directions, and the drum assignment. The vote
+49 tests covering the burst vote, the register arithmetic, the validation rules, the
+spreadsheet columns in both directions, the drum assignment and the usage series. The vote
 cases are transcribed from real OCR output on the meter photos — including the jitter
 burst that caught a false-confidence bug: dividing agreement by *surviving* frames
 instead of *attempted* ones reported certainty in a wrong digit.

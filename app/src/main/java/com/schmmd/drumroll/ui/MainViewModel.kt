@@ -154,6 +154,34 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         )
     }
 
+    /**
+      * Opens a saved reading for correction.
+      *
+      * A digit typed wrong is not worth deleting and re-entering, and deleting is the
+      * only thing history offered. The same confirm screen is reused so the same
+      * validation applies — the row keeps its identity, its capture time and its photo,
+      * and only the register, the date and the note can move.
+      */
+    fun startEdit(id: String) = viewModelScope.launch {
+        if (busy) return@launch
+        val reading = repository.byId(id) ?: return@launch
+        val config = settings.value.meter
+        val date = LocalDate.parse(reading.readingDate)
+        _confirm.value = ConfirmState(
+            drums = config.toDrums(reading.value),
+            // Every digit is known: they came from a saved reading, not a guess.
+            agreement = List(config.drumCount) { 1f },
+            readingDate = date,
+            // Not a fresh capture, so there is no photo date to measure drift against.
+            capturedAt = null,
+            note = reading.note,
+            previous = repository.previousFor(config.meterId, date, excluding = id),
+            ocrSummary = null,
+            photoPath = reading.photoPath,
+            editingId = id,
+        )
+    }
+
     fun updateDrums(drums: String) {
         _confirm.value = _confirm.value?.copy(drums = drums)
     }
@@ -167,7 +195,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         val config = settings.value.meter
         _confirm.value = state.copy(
             readingDate = date,
-            previous = repository.previousFor(config.meterId, date),
+            previous = repository.previousFor(config.meterId, date, excluding = state.editingId),
         )
     }
 
@@ -182,6 +210,24 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         val config = settings.value.meter
         val drums = state.drums.filter(Char::isDigit)
         if (drums.length != config.drumCount) return@launch
+
+        val editing = state.editingId?.let { repository.byId(it) }
+        if (editing != null) {
+            val value = config.toValue(drums)
+            repository.save(
+                editing.copy(
+                    readingDate = state.readingDate.toString(),
+                    value = value,
+                    note = state.note,
+                    // A hand-corrected register is a corrected one, whatever produced
+                    // the original. An untouched value keeps whatever it already said.
+                    corrected = if (value != editing.value) true else editing.corrected,
+                    sync = SyncState.QUEUED,
+                )
+            )
+            _confirm.value = null
+            return@launch
+        }
 
         val prefilled = buildString {
             for (i in 0 until config.drumCount) {

@@ -30,6 +30,8 @@ data class ConfirmState(
     val previous: Reading? = null,
     val ocrSummary: String? = null,
     val photoPath: String = "",
+    /** Set when an existing row is being changed rather than a new one recorded. */
+    val editingId: String? = null,
 )
 
 /**
@@ -61,7 +63,7 @@ fun ConfirmScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Confirm reading") },
+                title = { Text(if (state.editingId == null) "Confirm reading" else "Edit reading") },
                 navigationIcon = {
                     IconButton(onClick = onCancel) { Icon(Icons.Default.Close, "Cancel") }
                 },
@@ -80,7 +82,12 @@ fun ConfirmScreen(
                         .navigationBarsPadding()
                         .padding(16.dp)
                         .height(52.dp),
-                ) { Text("Save reading", fontSize = 16.sp) }
+                ) {
+                    Text(
+                        if (state.editingId == null) "Save reading" else "Update reading",
+                        fontSize = 16.sp,
+                    )
+                }
             }
         },
     ) { padding ->

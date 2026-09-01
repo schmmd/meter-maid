@@ -7,6 +7,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.ShowChart
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -16,6 +17,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.shape.CircleShape
 import com.schmmd.drumroll.data.MeterConfig
 import com.schmmd.drumroll.data.Reading
@@ -34,6 +36,8 @@ fun HistoryScreen(
     onBack: () -> Unit,
     onRetrySync: () -> Unit,
     onAddManual: () -> Unit,
+    onChart: () -> Unit,
+    onEdit: (String) -> Unit,
     onDelete: (String) -> Unit,
 ) {
     Scaffold(
@@ -46,6 +50,9 @@ fun HistoryScreen(
                     }
                 },
                 actions = {
+                    IconButton(onClick = onChart) {
+                        Icon(Icons.Default.ShowChart, "Water use over time")
+                    }
                     IconButton(onClick = onAddManual) { Icon(Icons.Default.Add, "Add a reading") }
                     IconButton(onClick = onRetrySync) { Icon(Icons.Default.Refresh, "Sync now") }
                 },
@@ -60,7 +67,7 @@ fun HistoryScreen(
         }
 
         LazyColumn(Modifier.padding(padding)) {
-            itemsIndexed(readings, config, onDelete)
+            itemsIndexed(readings, config, onEdit, onDelete)
         }
     }
 }
@@ -68,13 +75,14 @@ fun HistoryScreen(
 private fun androidx.compose.foundation.lazy.LazyListScope.itemsIndexed(
     readings: List<Reading>,
     config: MeterConfig,
+    onEdit: (String) -> Unit,
     onDelete: (String) -> Unit,
 ) {
     items(readings, key = { it.id }) { reading ->
         // Readings are ordered newest first, so the comparison row is the next one down.
         val index = readings.indexOf(reading)
         val previous = readings.getOrNull(index + 1)?.takeIf { it.meterId == reading.meterId }
-        ReadingRow(reading, previous, config, onDelete)
+        ReadingRow(reading, previous, config, onEdit, onDelete)
         HorizontalDivider()
     }
 }
@@ -84,6 +92,7 @@ private fun ReadingRow(
     reading: Reading,
     previous: Reading?,
     config: MeterConfig,
+    onEdit: (String) -> Unit,
     onDelete: (String) -> Unit,
 ) {
     val subtitle = if (previous != null) {
@@ -97,7 +106,12 @@ private fun ReadingRow(
     }
 
     Row(
-        Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
+        Modifier
+            .fillMaxWidth()
+            // The whole row, not a pencil hiding in the corner: correcting a mistyped
+            // drum is the common reason to come back to this screen.
+            .clickable { onEdit(reading.id) }
+            .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Box(

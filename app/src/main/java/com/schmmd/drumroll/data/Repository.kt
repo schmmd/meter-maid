@@ -12,8 +12,15 @@ class Repository(private val context: Context) {
 
     val readings: Flow<List<Reading>> = dao.observeAll()
 
-    suspend fun previousFor(meterId: String, date: LocalDate): Reading? =
-        dao.latestBefore(meterId, date.toString())
+    /**
+      * The reading a new one is measured against. [excluding] drops the row being
+      * edited, which would otherwise be its own predecessor and compare to itself.
+      */
+    suspend fun previousFor(meterId: String, date: LocalDate, excluding: String? = null): Reading? =
+        if (excluding == null) dao.latestBefore(meterId, date.toString())
+        else dao.latestBeforeExcluding(meterId, date.toString(), excluding)
+
+    suspend fun byId(id: String): Reading? = dao.byId(id)
 
     /**
       * Saves locally, marked as not yet in the file. The export watches [readings] and

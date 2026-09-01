@@ -25,6 +25,15 @@ interface ReadingDao {
     """)
     suspend fun latestBefore(meterId: String, onOrBefore: String): Reading?
 
+    /** As [latestBefore], but ignoring one row — the one currently being edited. */
+    @Query("""
+        SELECT * FROM readings
+        WHERE meterId = :meterId AND readingDate <= :onOrBefore AND id != :excluding
+        ORDER BY readingDate DESC, capturedAtUtc DESC
+        LIMIT 1
+    """)
+    suspend fun latestBeforeExcluding(meterId: String, onOrBefore: String, excluding: String): Reading?
+
     @Query("SELECT * FROM readings")
     suspend fun allOnce(): List<Reading>
 
