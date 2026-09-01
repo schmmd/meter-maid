@@ -11,7 +11,7 @@ import com.schmmd.drumroll.data.Reading
 import com.schmmd.drumroll.data.Roi
 import com.schmmd.drumroll.data.Settings
 import com.schmmd.drumroll.data.SyncState
-import com.schmmd.drumroll.ocr.MlKitRecognizer
+import com.schmmd.drumroll.ocr.PpOcrRecognizer
 import com.schmmd.drumroll.ocr.PREFILL_THRESHOLD
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -33,7 +33,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     private val application = app as DrumrollApp
     private val repository = application.repository
     private val settingsStore = application.settings
-    private val recognizer = MlKitRecognizer()
+    private val recognizer = PpOcrRecognizer(app)
 
     val readings = repository.readings
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())

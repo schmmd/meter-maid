@@ -16,6 +16,10 @@ android {
         versionCode = 1
         versionName = "0.1"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        // ONNX Runtime and ML Kit each ship a native library per ABI, and the three this
+        // phone cannot run accounted for 85MB of the APK.
+        ndk { abiFilters += listOf("arm64-v8a") }
     }
 
     buildTypes {

@@ -36,6 +36,21 @@ object Vote {
         val usable = frames
             .map { frame -> assemble(frame) }
             .mapNotNull { rotatingDrumsOf(it, drumCount, trailingZeros) }
+        return tallyReadings(usable, attempted, drumCount, engine, minUsableFrames)
+    }
+
+    /**
+     * The same vote over frames that have already been reduced to a digit string. PP-OCR
+     * resolves a whole register per frame rather than a bag of fragments, but the
+     * cross-frame agreement it is gated on is identical.
+     */
+    fun tallyReadings(
+        usable: List<String>,
+        attempted: Int,
+        drumCount: Int,
+        engine: String,
+        minUsableFrames: Int = MIN_USABLE_FRAMES,
+    ): RecognizedReading? {
 
         // Too few legible frames means the framing failed. Saying nothing is the
         // honest answer; the user types six digits and moves on.
