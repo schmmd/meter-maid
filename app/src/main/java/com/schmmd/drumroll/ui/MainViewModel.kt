@@ -79,7 +79,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             pendingPhoto = keepsake?.let { persist(it) }
 
             val recognized = if (current.ocrEnabled && frames.isNotEmpty()) {
-                runCatching { recognizer.read(frames, config.drumCount) }.getOrNull()
+                runCatching { recognizer.read(frames, config.drumCount, config.trailingZeros) }.getOrNull()
             } else null
 
             // Only positions the burst actually agreed on are prefilled. A blank box is

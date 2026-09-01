@@ -25,6 +25,19 @@ any of it was written. What that testing found:
 - **The mid-roll drum is never read correctly**, and confidence comes back at 1.00
   regardless. Model confidence is unusable as a gate here, so agreement across frames is
   used instead.
+- **Height separates the register from the dial face.** Measured on real crops, the
+  register comes back as a single 56–65px element while the dial numerals, `GALLON` and
+  the `5/8` pipe marking are all 14–27px. Fragments far below the tallest are dropped;
+  without that they are concatenated into the reading (`045694` → `86589120`).
+- **A correct read is seven digits, not six.** The guide box always includes the painted
+  zero — it is part of the register face — so requiring exactly `drumCount` threw good
+  frames away. A trailing run matching the painted zeros is now stripped instead.
+
+The honest limit, measured 2026-08-31: with all of the above fixed, ML Kit still returns
+`lölASI6E` and `lö1251680` for a register plainly reading `045694`. The digits sit on
+rotating drums split by black separator lines, and the Latin model reads them as letters.
+The pipeline no longer throws away good frames, but it cannot correct a bad transcription
+— which is why prefill is gated on cross-frame agreement and every drum stays editable.
 
 Hence the design: OCR prefills only the drums that several independent frames agreed on,
 and leaves anything else blank and focused rather than guessing. See `docs/` for the
@@ -103,7 +116,7 @@ keep, a cloud implementation drops in behind it without touching anything else.
 ./gradlew testDebugUnitTest
 ```
 
-23 tests covering the vote, the register arithmetic, the validation rules and the
+31 tests covering the vote, the register arithmetic, the validation rules and the
 derived spreadsheet columns. The vote
 cases are transcribed from real OCR output on the meter photos — including the jitter
 burst that caught a false-confidence bug: dividing agreement by *surviving* frames

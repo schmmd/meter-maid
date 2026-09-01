@@ -7,7 +7,7 @@ import android.graphics.Bitmap
  * order. ML Kit routinely splits a register into pieces ("324" + "442"); [boxLeft]
  * is what lets us reassemble rather than discard.
  */
-data class Fragment(val text: String, val boxLeft: Int)
+data class Fragment(val text: String, val boxLeft: Int, val boxHeight: Int = 0)
 
 data class RecognizedReading(
     /** Best digit per position. Positions below threshold are still filled here; */
@@ -25,7 +25,7 @@ interface MeterRecognizer {
      * @param frames already cropped to the register, rotated upright and upscaled.
      * @return null when too few frames were legible to say anything honest.
      */
-    suspend fun read(frames: List<Bitmap>, drumCount: Int): RecognizedReading?
+    suspend fun read(frames: List<Bitmap>, drumCount: Int, trailingZeros: Int): RecognizedReading?
 }
 
 /** Positions at or above this get prefilled; the rest are left blank for the user. */

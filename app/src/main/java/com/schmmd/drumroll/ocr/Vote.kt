@@ -20,9 +20,13 @@ object Vote {
 
     const val MIN_USABLE_FRAMES = 3
 
+    /** Fraction of the tallest fragment's height a fragment must reach to count. */
+    const val MIN_HEIGHT_RATIO = 0.6f
+
     fun tally(
         frames: List<List<Fragment>>,
         drumCount: Int,
+        trailingZeros: Int = 0,
         engine: String = "mlkit-v2",
         minUsableFrames: Int = MIN_USABLE_FRAMES,
     ): RecognizedReading? {
@@ -31,7 +35,7 @@ object Vote {
 
         val usable = frames
             .map { frame -> assemble(frame) }
-            .filter { it.length == drumCount }
+            .mapNotNull { rotatingDrumsOf(it, drumCount, trailingZeros) }
 
         // Too few legible frames means the framing failed. Saying nothing is the
         // honest answer; the user types six digits and moves on.
@@ -56,9 +60,38 @@ object Vote {
         )
     }
 
-    /** Rebuild one frame's fragments into a single digit string, left to right. */
-    fun assemble(frame: List<Fragment>): String =
-        frame.sortedBy { it.boxLeft }
+    /**
+     * Rebuild one frame's fragments into a single digit string, left to right.
+     *
+     * Only fragments close to the tallest are kept. Measured on the real crop, the
+     * register comes back 56-65px tall while the dial numerals, "GALLON" and the "5/8"
+     * pipe marking are all 14-27px — so height separates the register from the face it
+     * is printed on almost perfectly, and without it those get concatenated into the
+     * reading and push every frame past the length check.
+     */
+    fun assemble(frame: List<Fragment>): String {
+        if (frame.isEmpty()) return ""
+        val tallest = frame.maxOf { it.boxHeight }
+        return frame
+            .filter { tallest == 0 || it.boxHeight >= tallest * MIN_HEIGHT_RATIO }
+            .sortedBy { it.boxLeft }
             .joinToString("") { it.text }
             .filter(Char::isDigit)
+    }
+
+    /**
+     * The rotating drums alone, or null if this frame cannot supply them.
+     *
+     * The guide box naturally includes the painted zeros — they are part of the register
+     * face, and asking someone to frame around them in a crawlspace is not realistic —
+     * so a *correct* read of a six-drum meter with one painted zero returns seven
+     * digits. Requiring exactly six threw those away as unreadable.
+     */
+    fun rotatingDrumsOf(assembled: String, drumCount: Int, trailingZeros: Int): String? = when {
+        assembled.length == drumCount -> assembled
+        trailingZeros > 0 && assembled.length == drumCount + trailingZeros ->
+            // Only when the tail really is the painted zeros; anything else is a misread.
+            assembled.takeIf { it.endsWith("0".repeat(trailingZeros)) }?.dropLast(trailingZeros)
+        else -> null
+    }
 }

@@ -20,10 +20,14 @@ class MlKitRecognizer : MeterRecognizer {
 
     private val client = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS)
 
-    override suspend fun read(frames: List<Bitmap>, drumCount: Int): RecognizedReading? {
+    override suspend fun read(
+        frames: List<Bitmap>,
+        drumCount: Int,
+        trailingZeros: Int,
+    ): RecognizedReading? {
         if (frames.isEmpty()) return null
         val perFrame = frames.map { recognizeFragments(it) }
-        return Vote.tally(perFrame, drumCount)
+        return Vote.tally(perFrame, drumCount, trailingZeros)
     }
 
     private suspend fun recognizeFragments(bitmap: Bitmap): List<Fragment> =
@@ -37,9 +41,9 @@ class MlKitRecognizer : MeterRecognizer {
                         .flatMap { it.elements.asSequence() }
                         .mapNotNull { element ->
                             val digits = element.text.filter(Char::isDigit)
-                            val left = element.boundingBox?.left
-                            if (digits.isEmpty() || left == null) null
-                            else Fragment(digits, left)
+                            val box = element.boundingBox
+                            if (digits.isEmpty() || box == null) null
+                            else Fragment(digits, box.left, box.height())
                         }
                         .toList()
                     cont.resume(fragments)
