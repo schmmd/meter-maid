@@ -68,7 +68,15 @@ private fun Root() {
         return
     }
 
-    NavHost(nav, startDestination = "capture") {
+    NavHost(nav, startDestination = "home") {
+        composable("home") {
+            HomeScreen(
+                onRecord = { nav.navigate("capture") },
+                onReadings = { nav.navigate("history") },
+                onCharts = { nav.navigate("chart") },
+                onSettings = { nav.navigate("settings") },
+            )
+        }
         composable("capture") {
             CaptureScreen(
                 roi = settings.roi,

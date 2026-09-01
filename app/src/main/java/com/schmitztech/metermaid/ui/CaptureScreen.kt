@@ -44,8 +44,9 @@ import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicReference
 
 /**
- * The app's front door. Opens straight to the viewfinder — no home screen, no menu —
- * because every extra tap here is a reason not to take the reading at all.
+ * The viewfinder, one tap from the home screen. Everything on it serves getting a
+ * clean burst of the register; the corner shortcuts stay because a reading often
+ * prompts a look at the log right after.
  */
 @SuppressLint("UnsafeOptInUsageError")
 @Composable
@@ -174,7 +175,7 @@ fun CaptureScreen(
         }
 
         Text(
-            "Line the drums up inside the frame",
+            "Line the meter numbers inside the frame",
             color = Color.White.copy(alpha = 0.75f),
             fontSize = 14.sp,
             // Clears the icon row (48dp) and the degrees readout tucked under it.
