@@ -20,9 +20,11 @@ object ReadingsCsv {
     const val MIME = "text/csv"
     const val FILE_NAME = "well-readings.csv"
 
+    // No id column: it was the Apps Script idempotency key, and rewriting the whole
+    // file leaves nothing to de-duplicate against. It stays the Room primary key.
     private val HEADERS = listOf(
-        "id", "timestamp", "date", "reading", "meter", "source", "note",
-        "change", "days", "gal/day",
+        "meter", "timestamp", "date", "reading", "source", "note",
+        "change", "days", "gal/day", "photo",
     )
 
     private val TIMESTAMP: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
@@ -56,19 +58,21 @@ object ReadingsCsv {
 
             sb.append(
                 listOf(
-                    r.id,
+                    r.meterId,
                     // When the shutter actually fired. readingDate is editorial and can
                     // be nudged; this one is forensic and never edited, and it is what
                     // separates two readings taken on the same day.
                     TIMESTAMP.format(Instant.ofEpochMilli(r.capturedAtUtc).atZone(zone)),
                     r.readingDate,
                     r.value.toString(),
-                    r.meterId,
                     if (r.corrected) "corrected" else "ocr",
                     r.note,
                     change?.toString() ?: "new meter",
                     days?.toString() ?: "",
                     perDay,
+                    // Filename only. The absolute path is app-private and meaningless
+                    // off the device; the name is what ties a row to its JPEG.
+                    r.photoPath.substringAfterLast('/'),
                 ).joinToString(",", transform = ::escape),
             ).append("\r\n")
 

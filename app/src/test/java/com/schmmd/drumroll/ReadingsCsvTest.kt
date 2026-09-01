@@ -24,6 +24,7 @@ class ReadingsCsvTest {
         at: String = "${date}T12:00:00Z",
         meter: String = "rockwell",
         note: String = "",
+        photoPath: String = "",
     ) = Reading(
         id = id,
         readingDate = date,
@@ -33,7 +34,7 @@ class ReadingsCsvTest {
         ocrRaw = null,
         minAgreement = null,
         corrected = false,
-        photoPath = "",
+        photoPath = photoPath,
         note = note,
         sync = SyncState.QUEUED,
     )
@@ -43,9 +44,9 @@ class ReadingsCsvTest {
     @Test
     fun `first reading on a meter has no baseline to compare against`() {
         val rows = rows(ReadingsCsv.toCsv(listOf(reading("a", "2026-01-01", 100)), utc))
-        assertEquals("new meter", rows[1][7])
-        assertEquals("", rows[1][8])
-        assertEquals("", rows[1][9])
+        assertEquals("new meter", rows[1][CHANGE])
+        assertEquals("", rows[1][DAYS])
+        assertEquals("", rows[1][RATE])
     }
 
     @Test
@@ -55,9 +56,9 @@ class ReadingsCsvTest {
             utc,
         )
         val row = rows(csv)[2]
-        assertEquals("1000", row[7])
-        assertEquals("10", row[8])
-        assertEquals("100.0", row[9])
+        assertEquals("1000", row[CHANGE])
+        assertEquals("10", row[DAYS])
+        assertEquals("100.0", row[RATE])
     }
 
     @Test
@@ -71,12 +72,12 @@ class ReadingsCsvTest {
         )
         val rows = rows(csv)
         assertEquals(3, rows.size)
-        assertEquals("50", rows[2][7])
-        assertEquals("0", rows[2][8])
+        assertEquals("50", rows[2][CHANGE])
+        assertEquals("0", rows[2][DAYS])
         // Dividing by a zero-day gap would be an infinity, not a measurement.
-        assertEquals("", rows[2][9])
-        assertEquals("2026-01-01 08:00:00", rows[1][1])
-        assertEquals("2026-01-01 17:30:00", rows[2][1])
+        assertEquals("", rows[2][RATE])
+        assertEquals("2026-01-01 08:00:00", rows[1][TIMESTAMP])
+        assertEquals("2026-01-01 17:30:00", rows[2][TIMESTAMP])
     }
 
     @Test
@@ -88,7 +89,9 @@ class ReadingsCsvTest {
             ),
             utc,
         )
-        assertEquals("new meter", rows(csv)[2][7])
+        assertEquals("new meter", rows(csv)[2][CHANGE])
+        assertEquals("old", rows(csv)[1][METER])
+        assertEquals("new", rows(csv)[2][METER])
     }
 
     @Test
@@ -98,8 +101,24 @@ class ReadingsCsvTest {
             utc,
         )
         val rows = rows(csv)
-        assertEquals("early", rows[1][0])
-        assertEquals("late", rows[2][0])
+        assertEquals("2026-01-01", rows[1][DATE])
+        assertEquals("2026-03-01", rows[2][DATE])
+    }
+
+    @Test
+    fun `the photo column carries the filename, not the app-private path`() {
+        val csv = ReadingsCsv.toCsv(
+            listOf(
+                reading("a", "2026-01-01", 100, photoPath = "/data/user/0/com.schmmd.drumroll/files/photos/1756654321.jpg"),
+                reading("b", "2026-01-02", 200),
+            ),
+            utc,
+        )
+        val rows = rows(csv)
+        assertEquals("1756654321.jpg", rows[1][PHOTO])
+        // A reading saved before photos existed, or whose capture failed, stays blank
+        // rather than pointing at a file that is not there.
+        assertEquals("", rows[2][PHOTO])
     }
 
     @Test
@@ -113,6 +132,13 @@ class ReadingsCsvTest {
     }
 
     private companion object {
+        const val METER = 0
+        const val TIMESTAMP = 1
+        const val DATE = 2
+        const val CHANGE = 6
+        const val DAYS = 7
+        const val RATE = 8
+        const val PHOTO = 9
         const val HEADER_COUNT = 10
     }
 }

@@ -50,11 +50,13 @@ at all.
 
 The file carries the columns the Apps Script version kept in the sheet:
 
-| id | timestamp | date | reading | meter | source | note | change | days | gal/day |
-|----|-----------|------|---------|-------|--------|------|--------|------|---------|
+| meter | timestamp | date | reading | source | note | change | days | gal/day | photo |
+|-------|-----------|------|---------|--------|------|--------|------|---------|-------|
 
 `timestamp` is when the shutter fired and is never edited; `date` is editorial and can be
-nudged with −1d/+1d. Several readings a day are fine — the timestamp is what tells them
+nudged with −1d/+1d. `photo` is the JPEG's filename in the app's private storage — the
+absolute path is meaningless off the device, but the name ties a row to the frame it came
+from. Several readings a day are fine — the timestamp is what tells them
 apart, and `gal/day` is left blank rather than dividing by a zero-day gap.
 
 `change`, `days` and `gal/day` used to be `ARRAYFORMULA`s living in the spreadsheet. A
@@ -101,7 +103,7 @@ keep, a cloud implementation drops in behind it without touching anything else.
 ./gradlew testDebugUnitTest
 ```
 
-22 tests covering the vote, the register arithmetic, the validation rules and the
+23 tests covering the vote, the register arithmetic, the validation rules and the
 derived spreadsheet columns. The vote
 cases are transcribed from real OCR output on the meter photos — including the jitter
 burst that caught a false-confidence bug: dividing agreement by *surviving* frames
