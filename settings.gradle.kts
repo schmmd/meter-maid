@@ -19,5 +19,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "Drumroll"
+rootProject.name = "Meter Maid"
 include(":app")

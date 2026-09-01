@@ -6,11 +6,11 @@ plugins {
 }
 
 android {
-    namespace = "com.schmmd.drumroll"
+    namespace = "com.schmitztech.metermaid"
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.schmmd.drumroll"
+        applicationId = "com.schmitztech.metermaid"
         minSdk = 26
         targetSdk = 35
         versionCode = 1

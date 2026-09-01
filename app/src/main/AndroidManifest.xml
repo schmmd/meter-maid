@@ -5,20 +5,20 @@
     <uses-feature android:name="android.hardware.camera.any" android:required="true" />
 
     <application
-        android:name=".DrumrollApp"
+        android:name=".MeterMaidApp"
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="@xml/backup_rules"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:supportsRtl="true"
-        android:theme="@style/Theme.Drumroll">
+        android:theme="@style/Theme.MeterMaid">
 
         <activity
             android:name=".MainActivity"
             android:exported="true"
             android:screenOrientation="portrait"
-            android:theme="@style/Theme.Drumroll">
+            android:theme="@style/Theme.MeterMaid">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />

@@ -1,4 +1,4 @@
-# Drumroll
+# Meter Maid
 
 An Android app for logging well-meter readings: frame the register, confirm the digits,
 and the row lands in Google Sheets with the right date.
@@ -118,7 +118,7 @@ register from the far side of the pit. The setting is remembered.
 ## Layout
 
 ```
-app/src/main/java/com/schmmd/drumroll/
+app/src/main/java/com/schmitztech/metermaid/
   data/        Room entity + DAO, MeterConfig, DataStore settings, Repository
   ocr/         MeterRecognizer interface, PP-OCRv4 implementation, Vote, FrameCapture
   backup/      SafFile (Storage Access Framework), ReadingsCsv, ExportCoordinator
