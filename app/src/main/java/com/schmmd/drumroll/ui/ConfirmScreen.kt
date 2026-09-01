@@ -29,6 +29,7 @@ data class ConfirmState(
     val previous: Reading? = null,
     val duplicate: Boolean = false,
     val ocrSummary: String? = null,
+    val photoPath: String = "",
 )
 
 /**
@@ -88,6 +89,8 @@ fun ConfirmScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             Spacer(Modifier.height(4.dp))
+
+            RegisterPhoto(state.photoPath)
 
             Text("Reading", style = MaterialTheme.typography.labelMedium)
             DigitBoxes(
@@ -149,7 +152,7 @@ private fun IssueRow(issue: Issue) {
 }
 
 @Composable
-private fun LabelledValue(label: String, value: String) {
+internal fun LabelledValue(label: String, value: String) {
     Row(
         Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,

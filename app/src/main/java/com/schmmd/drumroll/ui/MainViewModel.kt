@@ -61,9 +61,16 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         val current = settings.value
         val config = current.meter
 
+        // Copied here, on the caller's thread: the analyzer keeps filling the ring
+        // buffer after the shutter and recycles what it evicts, so the frame has to be
+        // taken out of harm's way before the coroutine gets a chance to run.
+        val keepsake = frames.lastOrNull()
+            ?.takeIf { !it.isRecycled }
+            ?.let { runCatching { it.copy(it.config ?: Bitmap.Config.ARGB_8888, false) }.getOrNull() }
+
         viewModelScope.launch {
             val today = LocalDate.now()
-            pendingPhoto = frames.lastOrNull()?.let { persist(it) }
+            pendingPhoto = keepsake?.let { persist(it) }
 
             val recognized = if (current.ocrEnabled && frames.isNotEmpty()) {
                 runCatching { recognizer.read(frames, config.drumCount) }.getOrNull()
@@ -90,6 +97,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                 previous = previous,
                 duplicate = duplicate,
                 ocrSummary = summarise(recognized, config),
+                photoPath = pendingPhoto?.absolutePath.orEmpty(),
             )
             busy = false
         }
@@ -186,7 +194,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             val file = File(dir, "${Instant.now().toEpochMilli()}.jpg")
             FileOutputStream(file).use { bitmap.compress(Bitmap.CompressFormat.JPEG, 90, it) }
             file
-        }.getOrNull()
+        }.getOrNull().also { bitmap.recycle() }
     }
 
     override fun onCleared() {
