@@ -172,8 +172,12 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             // Every digit is known: they came from a saved reading, not a guess.
             agreement = List(config.drumCount) { 1f },
             readingDate = date,
-            // Not a fresh capture, so there is no photo date to measure drift against.
-            capturedAt = null,
+            // A photo-backed reading keeps its shutter date, so dragging the date far
+            // from the photo still warns on edit. A hand-entered row has no photo and
+            // nothing to drift from.
+            capturedAt = reading.photoPath.takeIf { it.isNotBlank() }?.let {
+                Instant.ofEpochMilli(reading.capturedAtUtc).atZone(ZoneId.systemDefault()).toLocalDate()
+            },
             note = reading.note,
             previous = repository.previousFor(config.meterId, date, excluding = id),
             ocrSummary = null,

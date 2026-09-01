@@ -122,6 +122,24 @@ class ReadingsCsvTest {
     }
 
     @Test
+    fun `the file looks the same from a comma-decimal locale`() {
+        // The CSV is data shared between devices, not prose for this one: a German
+        // phone writing "104,3" hands spreadsheets text instead of a number.
+        val before = java.util.Locale.getDefault()
+        java.util.Locale.setDefault(java.util.Locale.GERMANY)
+        try {
+            val csv = ReadingsCsv.toCsv(
+                listOf(reading("a", "2026-01-01", 1000), reading("b", "2026-01-11", 2043)),
+                utc,
+            )
+            assertEquals("104.3", rows(csv)[2][RATE])
+            assertEquals("2026-01-01 12:00:00", rows(csv)[1][TIMESTAMP])
+        } finally {
+            java.util.Locale.setDefault(before)
+        }
+    }
+
+    @Test
     fun `a note containing a comma cannot shift the columns`() {
         val csv = ReadingsCsv.toCsv(
             listOf(reading("a", "2026-01-01", 100, note = "pump ran long, check belt")),

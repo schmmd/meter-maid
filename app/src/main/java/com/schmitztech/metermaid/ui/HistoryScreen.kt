@@ -2,7 +2,7 @@ package com.schmitztech.metermaid.ui
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
@@ -33,6 +33,7 @@ import java.time.temporal.ChronoUnit
 fun HistoryScreen(
     readings: List<Reading>,
     config: MeterConfig,
+    canSync: Boolean,
     onBack: () -> Unit,
     onRetrySync: () -> Unit,
     onAddManual: () -> Unit,
@@ -54,7 +55,11 @@ fun HistoryScreen(
                         Icon(Icons.Default.ShowChart, "Water use over time")
                     }
                     IconButton(onClick = onAddManual) { Icon(Icons.Default.Add, "Add a reading") }
-                    IconButton(onClick = onRetrySync) { Icon(Icons.Default.Refresh, "Sync now") }
+                    // With no file linked the tap would do nothing at all; a button that
+                    // silently ignores you is worse than one that is not there.
+                    if (canSync) {
+                        IconButton(onClick = onRetrySync) { Icon(Icons.Default.Refresh, "Sync now") }
+                    }
                 },
             )
         },
@@ -67,23 +72,17 @@ fun HistoryScreen(
         }
 
         LazyColumn(Modifier.padding(padding)) {
-            itemsIndexed(readings, config, onEdit, onDelete)
+            itemsIndexed(readings, key = { _, r -> r.id }) { index, reading ->
+                // Ordered newest first, so the comparison row is the next one down on
+                // the same meter — scanned past any interleaved rows of another meter,
+                // which sat adjacent before and blanked the delta.
+                val previous = (index + 1 until readings.size)
+                    .firstOrNull { readings[it].meterId == reading.meterId }
+                    ?.let(readings::get)
+                ReadingRow(reading, previous, config, onEdit, onDelete)
+                HorizontalDivider()
+            }
         }
-    }
-}
-
-private fun androidx.compose.foundation.lazy.LazyListScope.itemsIndexed(
-    readings: List<Reading>,
-    config: MeterConfig,
-    onEdit: (String) -> Unit,
-    onDelete: (String) -> Unit,
-) {
-    items(readings, key = { it.id }) { reading ->
-        // Readings are ordered newest first, so the comparison row is the next one down.
-        val index = readings.indexOf(reading)
-        val previous = readings.getOrNull(index + 1)?.takeIf { it.meterId == reading.meterId }
-        ReadingRow(reading, previous, config, onEdit, onDelete)
-        HorizontalDivider()
     }
 }
 

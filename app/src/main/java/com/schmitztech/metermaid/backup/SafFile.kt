@@ -6,6 +6,7 @@ import android.net.Uri
 import android.provider.OpenableColumns
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import java.io.File
 
 /**
  * File access through the Storage Access Framework. The user picks a destination in the
@@ -33,6 +34,22 @@ class SafFile(private val context: Context) {
             ?: error("Could not open the selected file for writing.")
     }
 
+    /**
+     * Keeps the last full CSV in app-private storage, written atomically — temp file,
+     * then rename. SAF offers no such two-step for a single-document grant, so
+     * [writeText] truncates in place and a crash mid-stream can leave the user's only
+     * off-device copy empty; this file is what makes that survivable. Best-effort: a
+     * full disk must not turn into a failed export.
+     */
+    suspend fun mirror(text: String) = withContext(Dispatchers.IO) {
+        runCatching {
+            val dir = File(context.filesDir, "backup").apply { mkdirs() }
+            val tmp = File(dir, "$MIRROR_NAME.tmp")
+            tmp.writeText(text, Charsets.UTF_8)
+            if (!tmp.renameTo(File(dir, MIRROR_NAME))) tmp.delete()
+        }
+    }
+
     suspend fun readText(uri: Uri): String = withContext(Dispatchers.IO) {
         resolver.openInputStream(uri)?.use { it.readBytes().toString(Charsets.UTF_8) }
             ?: error("Could not open the selected file for reading.")
@@ -45,5 +62,9 @@ class SafFile(private val context: Context) {
                 if (c.moveToFirst()) c.getString(0) else null
             }
         }.getOrNull()
+    }
+
+    private companion object {
+        const val MIRROR_NAME = ReadingsCsv.FILE_NAME
     }
 }

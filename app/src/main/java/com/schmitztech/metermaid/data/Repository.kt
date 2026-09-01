@@ -38,17 +38,21 @@ class Repository(private val context: Context) {
       * Adds rows read from a spreadsheet, skipping any already held.
       *
       * The export carries no id — nothing downstream needed one — so identity here is
-      * the meter plus the capture timestamp, which is exactly what distinguishes two
-      * readings taken on the same day. Importing the same file twice is therefore safe,
-      * and importing a file that overlaps the log adds only what is missing.
+      * the meter, the reading date, and the value. The capture timestamp is deliberately
+      * left out: it does not survive the CSV round-trip intact (the column drops
+      * milliseconds and is written as zoneless local time), so keying on it re-imported
+      * a log's own export as all-new rows. Date and value round-trip exactly, and a row
+      * that repeats all three adds nothing worth keeping. Importing the same file twice
+      * is therefore safe, and importing a file that overlaps the log adds only what is
+      * missing.
       *
       * @return how many rows were new.
       */
     suspend fun importReadings(parsed: List<ParsedReading>): Int {
-        val known = dao.allOnce().map { it.meterId to it.capturedAtUtc }.toHashSet()
+        val known = dao.allOnce().map { Triple(it.meterId, it.readingDate, it.value) }.toHashSet()
         var added = 0
         for (row in parsed) {
-            if (!known.add(row.meterId to row.capturedAtUtc)) continue
+            if (!known.add(Triple(row.meterId, row.readingDate, row.value))) continue
             dao.upsert(
                 Reading(
                     id = UUID.randomUUID().toString(),

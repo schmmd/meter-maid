@@ -7,6 +7,7 @@ import java.time.LocalDateTime
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoUnit
+import java.util.Locale
 
 /**
  * The whole log as one spreadsheet-ready CSV.
@@ -39,7 +40,16 @@ object ReadingsCsv {
         "change", "days", "gal/day", "photo",
     )
 
-    private val TIMESTAMP: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
+    // Locale.ROOT throughout: the file is data shared between devices, not prose for
+    // this one. Without it a comma-decimal phone writes "104,3" and an Eastern-Arabic
+    // digit phone writes timestamps no other phone can parse back.
+    private val TIMESTAMP: DateTimeFormatter =
+        DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss", Locale.ROOT)
+
+    // The old Google Sheet's date cell was a real Date, and Sheets' "Download as CSV"
+    // renders it in display format — "10/24/2021 12:00:00", not ISO. Those downloads
+    // are the only route for pre-app history, so both shapes have to parse.
+    private val LEGACY_DATE: DateTimeFormatter = DateTimeFormatter.ofPattern("M/d/yyyy", Locale.ROOT)
 
     /**
      * [zone] is injectable so the column can be asserted on: it renders the capture
@@ -63,7 +73,7 @@ object ReadingsCsv {
             }
             val change = prev?.let { r.value - it.value }
             val perDay = if (change != null && days != null && days > 0L) {
-                String.format("%.1f", change.toDouble() / days)
+                String.format(Locale.ROOT, "%.1f", change.toDouble() / days)
             } else {
                 ""
             }
@@ -123,8 +133,7 @@ object ReadingsCsv {
             .filter { row -> row.any { it.isNotBlank() } }
             .mapNotNull { row ->
                 val value = cell(row, "reading").toLongOrNull() ?: return@mapNotNull null
-                val date = runCatching { LocalDate.parse(cell(row, "date")) }.getOrNull()
-                    ?: return@mapNotNull null
+                val date = dateOf(cell(row, "date")) ?: return@mapNotNull null
                 ParsedReading(
                     readingDate = date.toString(),
                     // Noon, when the row predates the timestamp column or carries a
@@ -139,6 +148,13 @@ object ReadingsCsv {
             }
         require(parsed.isNotEmpty()) { "That file contains no readings." }
         return parsed
+    }
+
+    /** ISO first (the app's own output), then the legacy Sheets shape, time part and all. */
+    private fun dateOf(raw: String): LocalDate? {
+        val head = raw.trim().substringBefore(' ')
+        return runCatching { LocalDate.parse(head) }.getOrNull()
+            ?: runCatching { LocalDate.parse(head, LEGACY_DATE) }.getOrNull()
     }
 
     private fun instantOf(raw: String, date: LocalDate, zone: ZoneId): Long {

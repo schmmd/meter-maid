@@ -81,6 +81,7 @@ private fun Root() {
             HistoryScreen(
                 readings = readings,
                 config = settings.meter,
+                canSync = settings.exportUri.isNotBlank(),
                 onBack = { nav.popBackStack() },
                 onRetrySync = vm::exportNow,
                 onAddManual = { vm.startManualEntry() },

@@ -96,12 +96,11 @@ fun SettingsScreen(
             }
             Text(
                 "\u201cUse existing\u201d only links the file — it is not read or " +
-                    "overwritten until you import or save.",
+                    "overwritten until you import or save. Saving after every " +
+                    "reading turns on once you import it.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            Row {
-            }
 
             Row(
                 Modifier.fillMaxWidth(),

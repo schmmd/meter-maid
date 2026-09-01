@@ -51,6 +51,24 @@ class ReadingsCsvParseTest {
     }
 
     @Test
+    fun `import identity survives round trips that mangle the timestamp`() {
+        // The timestamp column drops milliseconds, and a file exported in one zone can
+        // be parsed in another. Both mangle capturedAtUtc, which is why import dedupes
+        // on (meter, date, value) instead — that triple has to come back exact.
+        val original = listOf(reading("2026-01-01", 1000, "2026-01-01T08:00:00.789Z"))
+        val csv = ReadingsCsv.toCsv(original, utc)
+        for (zone in listOf(utc, ZoneId.of("America/Los_Angeles"))) {
+            val back = ReadingsCsv.parse(csv, zone)
+            assertEquals(
+                Triple(original[0].meterId, original[0].readingDate, original[0].value),
+                Triple(back[0].meterId, back[0].readingDate, back[0].value),
+            )
+        }
+        // Same-zone round trip alone already loses the milliseconds.
+        assertTrue(original[0].capturedAtUtc != ReadingsCsv.parse(csv, utc)[0].capturedAtUtc)
+    }
+
+    @Test
     fun `a note containing a comma does not shift the columns`() {
         val original = listOf(reading("2026-01-01", 1000, "2026-01-01T08:00:00Z",
             note = "pump ran long, check belt"))
@@ -72,6 +90,17 @@ class ReadingsCsvParseTest {
     fun `a row with no timestamp falls back to noon on its date`() {
         val back = ReadingsCsv.parse("date,reading\n2026-02-02,4242\n", utc)
         assertEquals(Instant.parse("2026-02-02T12:00:00Z").toEpochMilli(), back[0].capturedAtUtc)
+    }
+
+    @Test
+    fun `a csv downloaded from the old google sheet still imports`() {
+        // The Apps Script wrote the date cell as a real Date, which Sheets renders as
+        // "10/24/2021 12:00:00" on download — the one migration path for old data.
+        val csv = "id,date,reading\nabc123,10/24/2021 12:00:00,3244440\n"
+        val back = ReadingsCsv.parse(csv, utc)
+        assertEquals(1, back.size)
+        assertEquals("2021-10-24", back[0].readingDate)
+        assertEquals(3244440L, back[0].value)
     }
 
     @Test

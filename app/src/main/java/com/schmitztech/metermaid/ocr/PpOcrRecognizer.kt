@@ -24,11 +24,12 @@ import kotlinx.coroutines.withContext
 class PpOcrRecognizer(context: Context) : MeterRecognizer {
 
     private val appContext = context.applicationContext
-    private val models: PpOcrModels? by lazy {
+    private val lazyModels = lazy {
         runCatching { PpOcrModels.load(appContext) }
             .onFailure { Log.w(TAG, "could not load the PP-OCR models", it) }
             .getOrNull()
     }
+    private val models: PpOcrModels? by lazyModels
     private val detector: RegisterDetector? by lazy { models?.let(::RegisterDetector) }
     private val recognizer: DigitRecognizer? by lazy { models?.let(::DigitRecognizer) }
 
@@ -84,7 +85,10 @@ class PpOcrRecognizer(context: Context) : MeterRecognizer {
     }
 
     fun close() {
-        runCatching { models?.close() }
+        // onCleared() calls this on the main thread. Touching a cold lazy here would
+        // read ~15 MB of ONNX models off disk purely to close them — only sessions
+        // that actually exist need freeing.
+        if (lazyModels.isInitialized()) runCatching { models?.close() }
     }
 
     private companion object {
