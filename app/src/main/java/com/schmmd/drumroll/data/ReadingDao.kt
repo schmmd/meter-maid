@@ -25,9 +25,6 @@ interface ReadingDao {
     """)
     suspend fun latestBefore(meterId: String, onOrBefore: String): Reading?
 
-    @Query("SELECT * FROM readings WHERE readingDate = :date AND meterId = :meterId LIMIT 1")
-    suspend fun onDate(date: String, meterId: String): Reading?
-
     @Query("SELECT * FROM readings")
     suspend fun allOnce(): List<Reading>
 

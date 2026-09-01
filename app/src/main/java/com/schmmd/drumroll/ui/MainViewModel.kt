@@ -93,7 +93,6 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             }
 
             val previous = repository.previousFor(config.meterId, today)
-            val duplicate = repository.existingOn(today, config.meterId) != null
 
             _confirm.value = ConfirmState(
                 drums = prefill,
@@ -101,7 +100,6 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                 readingDate = today,
                 capturedAt = today,
                 previous = previous,
-                duplicate = duplicate,
                 ocrSummary = summarise(recognized, config),
                 photoPath = pendingPhoto?.absolutePath.orEmpty(),
             )
@@ -137,7 +135,6 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         _confirm.value = state.copy(
             readingDate = date,
             previous = repository.previousFor(config.meterId, date),
-            duplicate = repository.existingOn(date, config.meterId) != null,
         )
     }
 

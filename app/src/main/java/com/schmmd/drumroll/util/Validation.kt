@@ -24,7 +24,6 @@ object Validation {
         capturedAt: LocalDate,
         previous: Reading?,
         config: MeterConfig,
-        duplicateOnDate: Boolean,
     ): List<Issue> {
         val issues = mutableListOf<Issue>()
 
@@ -54,10 +53,6 @@ object Validation {
                     )
                 }
             }
-        }
-
-        if (duplicateOnDate) {
-            issues += Issue(Severity.WARN, "There's already a reading for $readingDate.")
         }
 
         val drift = abs(ChronoUnit.DAYS.between(capturedAt, readingDate))

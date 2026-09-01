@@ -25,7 +25,7 @@ class ValidationTest {
         val issues = Validation.check(
             drums = "3244", readingDate = LocalDate.parse("2021-10-24"),
             capturedAt = LocalDate.parse("2021-10-24"), previous = null,
-            config = config, duplicateOnDate = false,
+            config = config,
         )
         assertTrue(Validation.blocking(issues))
     }
@@ -37,7 +37,7 @@ class ValidationTest {
             drums = "324444", readingDate = LocalDate.parse("2021-10-24"),
             capturedAt = LocalDate.parse("2021-10-24"),
             previous = reading("2021-10-19", 3_239_080L),
-            config = config, duplicateOnDate = false,
+            config = config,
         )
         assertTrue(issues.isEmpty())
     }
@@ -48,7 +48,7 @@ class ValidationTest {
             drums = "323000", readingDate = LocalDate.parse("2021-10-24"),
             capturedAt = LocalDate.parse("2021-10-24"),
             previous = reading("2021-10-19", 3_239_080L),
-            config = config, duplicateOnDate = false,
+            config = config,
         )
         assertEquals(1, issues.size)
         assertEquals(Severity.WARN, issues.first().severity)
@@ -62,7 +62,7 @@ class ValidationTest {
             drums = "424444", readingDate = LocalDate.parse("2021-10-24"),
             capturedAt = LocalDate.parse("2021-10-24"),
             previous = reading("2021-10-19", 3_239_080L),
-            config = config, duplicateOnDate = false,
+            config = config,
         )
         assertTrue(issues.any { it.message.contains("gal/day") })
     }
@@ -72,7 +72,7 @@ class ValidationTest {
         val issues = Validation.check(
             drums = "324444", readingDate = LocalDate.parse("2021-09-01"),
             capturedAt = LocalDate.parse("2021-10-24"),
-            previous = null, config = config, duplicateOnDate = false,
+            previous = null, config = config,
         )
         assertTrue(issues.any { it.message.contains("days from when the photo") })
     }

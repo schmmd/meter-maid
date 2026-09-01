@@ -20,6 +20,9 @@ import com.schmmd.drumroll.data.MeterConfig
 import com.schmmd.drumroll.data.Reading
 import com.schmmd.drumroll.data.SyncState
 import java.time.LocalDate
+import java.time.Instant
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoUnit
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -99,7 +102,10 @@ private fun ReadingRow(
         )
         Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f)) {
-            Text(reading.readingDate, style = MaterialTheme.typography.bodyLarge)
+            Text(
+                "${reading.readingDate}  ${reading.timeOfDay()}",
+                style = MaterialTheme.typography.bodyLarge,
+            )
             Text(subtitle, style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
@@ -114,6 +120,11 @@ private fun ReadingRow(
         }
     }
 }
+
+/** Local clock time the shutter fired, so same-day readings are distinguishable. */
+private fun Reading.timeOfDay(): String =
+    DateTimeFormatter.ofPattern("HH:mm")
+        .format(Instant.ofEpochMilli(capturedAtUtc).atZone(ZoneId.systemDefault()))
 
 @Composable
 private fun SyncState.color(): Color = when (this) {

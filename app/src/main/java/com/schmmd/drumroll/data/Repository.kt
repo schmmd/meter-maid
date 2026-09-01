@@ -13,9 +13,6 @@ class Repository(private val context: Context) {
     suspend fun previousFor(meterId: String, date: LocalDate): Reading? =
         dao.latestBefore(meterId, date.toString())
 
-    suspend fun existingOn(date: LocalDate, meterId: String): Reading? =
-        dao.onDate(date.toString(), meterId)
-
     /**
       * Saves locally, marked as not yet in the file. The export watches [readings] and
       * picks the change up on its own, so the save never waits on a file write.

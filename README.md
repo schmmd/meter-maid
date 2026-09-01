@@ -50,8 +50,12 @@ at all.
 
 The file carries the columns the Apps Script version kept in the sheet:
 
-| id | date | reading | meter | source | note | change | days | gal/day |
-|----|------|---------|-------|--------|------|--------|------|---------|
+| id | timestamp | date | reading | meter | source | note | change | days | gal/day |
+|----|-----------|------|---------|-------|--------|------|--------|------|---------|
+
+`timestamp` is when the shutter fired and is never edited; `date` is editorial and can be
+nudged with −1d/+1d. Several readings a day are fine — the timestamp is what tells them
+apart, and `gal/day` is left blank rather than dividing by a zero-day gap.
 
 `change`, `days` and `gal/day` used to be `ARRAYFORMULA`s living in the spreadsheet. A
 file in Drive is not a live sheet and has nowhere to host them, so they are computed on
@@ -97,7 +101,8 @@ keep, a cloud implementation drops in behind it without touching anything else.
 ./gradlew testDebugUnitTest
 ```
 
-16 tests covering the vote, the register arithmetic and the validation rules. The vote
+22 tests covering the vote, the register arithmetic, the validation rules and the
+derived spreadsheet columns. The vote
 cases are transcribed from real OCR output on the meter photos — including the jitter
 burst that caught a false-confidence bug: dividing agreement by *surviving* frames
 instead of *attempted* ones reported certainty in a wrong digit.

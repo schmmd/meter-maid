@@ -1,7 +1,10 @@
 package com.schmmd.drumroll.backup
 
 import com.schmmd.drumroll.data.Reading
+import java.time.Instant
 import java.time.LocalDate
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoUnit
 
 /**
@@ -18,10 +21,17 @@ object ReadingsCsv {
     const val FILE_NAME = "well-readings.csv"
 
     private val HEADERS = listOf(
-        "id", "date", "reading", "meter", "source", "note", "change", "days", "gal/day",
+        "id", "timestamp", "date", "reading", "meter", "source", "note",
+        "change", "days", "gal/day",
     )
 
-    fun toCsv(readings: List<Reading>): String {
+    private val TIMESTAMP: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
+
+    /**
+     * [zone] is injectable so the column can be asserted on: it renders the capture
+     * instant in local time, which otherwise makes the output depend on where it runs.
+     */
+    fun toCsv(readings: List<Reading>, zone: ZoneId = ZoneId.systemDefault()): String {
         // Chronological, because every derived column is a comparison with the reading
         // before it. Ties on the same day fall back to when the photo was taken.
         val ordered = readings.sortedWith(compareBy({ it.readingDate }, { it.capturedAtUtc }))
@@ -47,6 +57,10 @@ object ReadingsCsv {
             sb.append(
                 listOf(
                     r.id,
+                    // When the shutter actually fired. readingDate is editorial and can
+                    // be nudged; this one is forensic and never edited, and it is what
+                    // separates two readings taken on the same day.
+                    TIMESTAMP.format(Instant.ofEpochMilli(r.capturedAtUtc).atZone(zone)),
                     r.readingDate,
                     r.value.toString(),
                     r.meterId,

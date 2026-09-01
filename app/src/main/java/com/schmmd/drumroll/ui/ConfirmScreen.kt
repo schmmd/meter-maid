@@ -27,7 +27,6 @@ data class ConfirmState(
     val capturedAt: LocalDate,
     val note: String = "",
     val previous: Reading? = null,
-    val duplicate: Boolean = false,
     val ocrSummary: String? = null,
     val photoPath: String = "",
 )
@@ -47,14 +46,13 @@ fun ConfirmScreen(
     onSave: () -> Unit,
     onCancel: () -> Unit,
 ) {
-    val issues = remember(state.drums, state.readingDate, state.previous, state.duplicate) {
+    val issues = remember(state.drums, state.readingDate, state.previous) {
         Validation.check(
             drums = state.drums.filter(Char::isDigit),
             readingDate = state.readingDate,
             capturedAt = state.capturedAt,
             previous = state.previous,
             config = config,
-            duplicateOnDate = state.duplicate,
         )
     }
     val blocked = Validation.blocking(issues)
