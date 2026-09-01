@@ -30,6 +30,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.schmitztech.metermaid.data.MeterConfig
+import com.schmitztech.metermaid.ocr.PREFILL_THRESHOLD
 
 /**
  * The register as separate boxes rather than one text field.
@@ -68,12 +69,8 @@ fun DigitBoxes(
     ) {
         for (i in 0 until config.drumCount) {
             val ch = drums.getOrNull(i)?.takeIf { it.isDigit() }
-            val low = agreement.getOrNull(i)?.let { it < com.schmitztech.metermaid.ocr.PREFILL_THRESHOLD } ?: true
-            val borderColor = when {
-                ch == null -> WarnColor
-                low -> WarnColor
-                else -> MaterialTheme.colorScheme.outline
-            }
+            val low = agreement.getOrNull(i)?.let { it < PREFILL_THRESHOLD } ?: true
+            val borderColor = if (ch == null || low) WarnColor else MaterialTheme.colorScheme.outline
 
             Box(
                 modifier = Modifier

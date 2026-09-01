@@ -235,14 +235,8 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             return@launch
         }
 
-        val prefilled = buildString {
-            for (i in 0 until config.drumCount) {
-                val agree = state.agreement.getOrNull(i) ?: 0f
-                append(if (agree >= PREFILL_THRESHOLD) '1' else '0')
-            }
-        }
         // "Corrected" means the user changed or supplied a digit the OCR did not.
-        val corrected = prefilled.contains('0')
+        val corrected = state.agreement.any { it < PREFILL_THRESHOLD }
 
         repository.save(
             Reading(

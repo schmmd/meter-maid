@@ -21,7 +21,7 @@ import kotlinx.coroutines.withContext
  * drums. The last step is not optional — the black bars between drums come back as `1`s,
  * so the recognizer emits ten characters for a seven-digit face.
  */
-class PpOcrRecognizer(context: Context) : MeterRecognizer {
+class PpOcrRecognizer(context: Context) {
 
     private val appContext = context.applicationContext
     private val lazyModels = lazy {
@@ -33,7 +33,13 @@ class PpOcrRecognizer(context: Context) : MeterRecognizer {
     private val detector: RegisterDetector? by lazy { models?.let(::RegisterDetector) }
     private val recognizer: DigitRecognizer? by lazy { models?.let(::DigitRecognizer) }
 
-    override suspend fun read(
+    /**
+     * @param frames already cropped to the guide box, rotated upright and upscaled.
+     * @param trailingZeros painted zeros on the face, which the recognizer sees but
+     *   which never turn, so they are stripped rather than reported.
+     * @return null when too few frames were legible to say anything honest.
+     */
+    suspend fun read(
         frames: List<Bitmap>,
         drumCount: Int,
         trailingZeros: Int,
@@ -81,7 +87,7 @@ class PpOcrRecognizer(context: Context) : MeterRecognizer {
         }
 
         Log.i(TAG, "burst: ${readings.size} of ${frames.size} frames usable $readings")
-        Vote.tallyReadings(readings, frames.size, drumCount, engine = ENGINE)
+        Vote.tallyReadings(readings, frames.size, drumCount)
     }
 
     fun close() {
@@ -92,7 +98,6 @@ class PpOcrRecognizer(context: Context) : MeterRecognizer {
     }
 
     private companion object {
-        const val ENGINE = "ppocrv4"
         const val TAG = "MeterMaidOcr"
     }
 }

@@ -23,7 +23,6 @@ object Vote {
         usable: List<String>,
         attempted: Int,
         drumCount: Int,
-        engine: String,
         minUsableFrames: Int = MIN_USABLE_FRAMES,
     ): RecognizedReading? {
 
@@ -44,7 +43,6 @@ object Vote {
         return RecognizedReading(
             digits = digits.toString(),
             agreement = agreement,
-            engine = engine,
             framesAttempted = attempted,
             framesUsable = usable.size,
         )

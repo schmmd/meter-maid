@@ -14,7 +14,7 @@ import org.junit.Test
 class VoteTest {
 
     private fun tally(usable: List<String>, attempted: Int = usable.size, min: Int = 3) =
-        Vote.tallyReadings(usable, attempted, drumCount = 6, engine = "test", minUsableFrames = min)
+        Vote.tallyReadings(usable, attempted, drumCount = 6, minUsableFrames = min)
 
     @Test
     fun `unanimous frames give full agreement`() {

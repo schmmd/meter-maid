@@ -181,16 +181,14 @@ fun CaptureScreen(
                 .padding(top = 76.dp),
         )
 
-        Row(
+        IconButton(
+            onClick = onFlipGuide,
             modifier = Modifier
                 .align(Alignment.TopEnd)
                 .statusBarsPadding()
                 .padding(horizontal = 8.dp),
-            horizontalArrangement = Arrangement.spacedBy(4.dp),
         ) {
-            IconButton(onClick = onFlipGuide) {
-                Icon(Icons.Default.FlipCameraAndroid, "Flip guide", tint = Color.White)
-            }
+            Icon(Icons.Default.FlipCameraAndroid, "Flip guide", tint = Color.White)
         }
 
         if (zoom > 1.01f) {

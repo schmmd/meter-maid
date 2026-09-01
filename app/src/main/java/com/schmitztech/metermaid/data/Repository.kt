@@ -17,8 +17,7 @@ class Repository(private val context: Context) {
       * edited, which would otherwise be its own predecessor and compare to itself.
       */
     suspend fun previousFor(meterId: String, date: LocalDate, excluding: String? = null): Reading? =
-        if (excluding == null) dao.latestBefore(meterId, date.toString())
-        else dao.latestBeforeExcluding(meterId, date.toString(), excluding)
+        dao.latestBefore(meterId, date.toString(), excluding)
 
     suspend fun byId(id: String): Reading? = dao.byId(id)
 

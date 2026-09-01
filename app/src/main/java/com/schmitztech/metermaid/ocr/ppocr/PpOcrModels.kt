@@ -65,9 +65,9 @@ class PpOcrModels private constructor(
                     "rec_in=${rec.inputNames} rec_out=${rec.outputInfo.keys}",
             )
             // Index 0 is the CTC blank; the trailing space is PaddleOCR's convention.
+            // Blank lines are kept: dropping one would shift every class index after it.
             val chars = rec.metadata.customMetadata["character"]
                 ?.split("\n")
-                ?.filter { it.isNotEmpty() || true }
                 .orEmpty()
             val charset = buildList {
                 add("")
