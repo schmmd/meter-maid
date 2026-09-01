@@ -1,7 +1,6 @@
 package com.schmitztech.metermaid
 
 import com.schmitztech.metermaid.data.Reading
-import com.schmitztech.metermaid.data.SyncState
 import com.schmitztech.metermaid.data.UsageSeries
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -16,7 +15,7 @@ class UsageSeriesTest {
             id = "$date-$value-$at", readingDate = date,
             capturedAtUtc = Instant.parse(at).toEpochMilli(), value = value, meterId = meter,
             ocrRaw = null, minAgreement = null, corrected = false, photoPath = "",
-            note = "", sync = SyncState.SYNCED,
+            note = "",
         )
 
     @Test

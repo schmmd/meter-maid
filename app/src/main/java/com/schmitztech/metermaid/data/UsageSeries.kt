@@ -1,7 +1,6 @@
 package com.schmitztech.metermaid.data
 
 import java.time.LocalDate
-import java.time.temporal.ChronoUnit
 
 /**
  * One plotted day: the average draw since the previous reading on the same meter.
@@ -34,25 +33,18 @@ object UsageSeries {
             .groupBy { it.meterId to it.readingDate }
             .mapValues { (_, sameDay) -> sameDay.maxBy { it.capturedAtUtc } }
             .values
-            .sortedWith(compareBy({ it.readingDate }, { it.capturedAtUtc }))
+            .toList()
 
-        val points = ArrayList<UsagePoint>()
-        val previousByMeter = HashMap<String, Reading>()
-        for (reading in latestPerDay) {
-            val previous = previousByMeter.put(reading.meterId, reading) ?: continue
-            val from = LocalDate.parse(previous.readingDate)
-            val to = LocalDate.parse(reading.readingDate)
-            val days = ChronoUnit.DAYS.between(from, to)
-            // A zero-day gap would divide by nothing; a backwards one means the log was
-            // edited into an order the meter cannot have run in.
-            if (days <= 0) continue
-            points += UsagePoint(
-                date = to,
-                gallonsPerDay = (reading.value - previous.value).toDouble() / days,
-                reading = reading.value,
-                spanDays = days,
+        // perDay is null for a missing baseline, a zero-day gap (nothing to divide by)
+        // and a backwards one — exactly the intervals that cannot be plotted.
+        return latestPerDay.intervals().mapNotNull { interval ->
+            val perDay = interval.perDay ?: return@mapNotNull null
+            UsagePoint(
+                date = LocalDate.parse(interval.reading.readingDate),
+                gallonsPerDay = perDay,
+                reading = interval.reading.value,
+                spanDays = interval.days ?: return@mapNotNull null,
             )
         }
-        return points
     }
 }

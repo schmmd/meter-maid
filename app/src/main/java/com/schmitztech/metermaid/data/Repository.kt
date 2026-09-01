@@ -23,11 +23,11 @@ class Repository(private val context: Context) {
     suspend fun byId(id: String): Reading? = dao.byId(id)
 
     /**
-      * Saves locally, marked as not yet in the file. The export watches [readings] and
-      * picks the change up on its own, so the save never waits on a file write.
+      * Saves locally. The export watches [readings] and picks the change up on its
+      * own, so the save never waits on a file write.
       */
     suspend fun save(reading: Reading) {
-        dao.upsert(reading.copy(sync = SyncState.QUEUED))
+        dao.upsert(reading)
     }
 
     suspend fun delete(id: String) = dao.delete(id)
@@ -67,15 +67,10 @@ class Repository(private val context: Context) {
                     // the row to its frame if the photos are ever restored alongside.
                     photoPath = row.photoName,
                     note = row.note,
-                    // It came out of the file, so as far as the file is concerned it is
-                    // already there. A later export rewrites the whole thing regardless.
-                    sync = SyncState.SYNCED,
                 )
             )
             added++
         }
         return added
     }
-
-    suspend fun markAll(state: SyncState) = dao.markAll(state)
 }

@@ -10,7 +10,7 @@ import com.schmitztech.metermaid.data.MeterConfig
 import com.schmitztech.metermaid.data.Reading
 import com.schmitztech.metermaid.data.Roi
 import com.schmitztech.metermaid.data.Settings
-import com.schmitztech.metermaid.data.SyncState
+import com.schmitztech.metermaid.backup.ExportStatus
 import com.schmitztech.metermaid.ocr.PpOcrRecognizer
 import com.schmitztech.metermaid.ocr.PREFILL_THRESHOLD
 import kotlinx.coroutines.Dispatchers
@@ -40,6 +40,9 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
 
     val settings: StateFlow<Settings> = settingsStore.settings
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), Settings())
+
+    /** Whether the chosen file currently reflects the log — one state for the whole log. */
+    val exportStatus: StateFlow<ExportStatus> = application.export.status
 
     private val _confirm = MutableStateFlow<ConfirmState?>(null)
     val confirm: StateFlow<ConfirmState?> = _confirm.asStateFlow()
@@ -226,7 +229,6 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                     // A hand-corrected register is a corrected one, whatever produced
                     // the original. An untouched value keeps whatever it already said.
                     corrected = if (value != editing.value) true else editing.corrected,
-                    sync = SyncState.QUEUED,
                 )
             )
             _confirm.value = null
@@ -254,7 +256,6 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                 corrected = corrected,
                 photoPath = pendingPhoto?.absolutePath.orEmpty(),
                 note = state.note,
-                sync = SyncState.QUEUED,
             )
         )
         pendingPhoto = null

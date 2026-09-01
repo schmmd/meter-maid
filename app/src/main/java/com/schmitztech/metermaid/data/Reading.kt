@@ -3,8 +3,6 @@ package com.schmitztech.metermaid.data
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 
-enum class SyncState { QUEUED, SYNCING, SYNCED, FAILED }
-
 /**
  * One well-meter reading.
  *
@@ -28,6 +26,4 @@ data class Reading(
     val corrected: Boolean,        // did the user change a prefilled digit?
     val photoPath: String,
     val note: String,
-    val sync: SyncState,
-    val syncAttempts: Int = 0,
 )

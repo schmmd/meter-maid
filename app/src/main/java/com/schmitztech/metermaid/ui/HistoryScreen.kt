@@ -2,7 +2,7 @@ package com.schmitztech.metermaid.ui
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
@@ -10,30 +10,29 @@ import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.ShowChart
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.shape.CircleShape
+import com.schmitztech.metermaid.backup.ExportStatus
+import com.schmitztech.metermaid.data.Interval
 import com.schmitztech.metermaid.data.MeterConfig
 import com.schmitztech.metermaid.data.Reading
-import com.schmitztech.metermaid.data.SyncState
-import java.time.LocalDate
+import com.schmitztech.metermaid.data.intervals
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
-import java.time.temporal.ChronoUnit
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HistoryScreen(
     readings: List<Reading>,
     config: MeterConfig,
-    canSync: Boolean,
+    /** Null when no file is linked, which hides the sync control entirely. */
+    syncStatus: ExportStatus?,
     onBack: () -> Unit,
     onRetrySync: () -> Unit,
     onAddManual: () -> Unit,
@@ -56,9 +55,13 @@ fun HistoryScreen(
                     }
                     IconButton(onClick = onAddManual) { Icon(Icons.Default.Add, "Add a reading") }
                     // With no file linked the tap would do nothing at all; a button that
-                    // silently ignores you is worse than one that is not there.
-                    if (canSync) {
-                        IconButton(onClick = onRetrySync) { Icon(Icons.Default.Refresh, "Sync now") }
+                    // silently ignores you is worse than one that is not there. The tint
+                    // is the old per-row dot moved to where the one fact actually lives:
+                    // the whole log is saved, pending, or failed together.
+                    if (syncStatus != null) {
+                        IconButton(onClick = onRetrySync) {
+                            Icon(Icons.Default.Refresh, "Sync now", tint = syncStatus.color())
+                        }
                     }
                 },
             )
@@ -71,15 +74,14 @@ fun HistoryScreen(
             return@Scaffold
         }
 
+        // The same chronological walk every other surface uses, keyed for the
+        // newest-first display order this list arrives in.
+        val intervalById = remember(readings) {
+            readings.intervals().associateBy { it.reading.id }
+        }
         LazyColumn(Modifier.padding(padding)) {
-            itemsIndexed(readings, key = { _, r -> r.id }) { index, reading ->
-                // Ordered newest first, so the comparison row is the next one down on
-                // the same meter — scanned past any interleaved rows of another meter,
-                // which sat adjacent before and blanked the delta.
-                val previous = (index + 1 until readings.size)
-                    .firstOrNull { readings[it].meterId == reading.meterId }
-                    ?.let(readings::get)
-                ReadingRow(reading, previous, config, onEdit, onDelete)
+            items(readings, key = { it.id }) { reading ->
+                ReadingRow(intervalById.getValue(reading.id), config, onEdit, onDelete)
                 HorizontalDivider()
             }
         }
@@ -88,20 +90,16 @@ fun HistoryScreen(
 
 @Composable
 private fun ReadingRow(
-    reading: Reading,
-    previous: Reading?,
+    interval: Interval,
     config: MeterConfig,
     onEdit: (String) -> Unit,
     onDelete: (String) -> Unit,
 ) {
-    val subtitle = if (previous != null) {
-        val days = ChronoUnit.DAYS.between(
-            LocalDate.parse(previous.readingDate), LocalDate.parse(reading.readingDate)
-        )
-        val delta = reading.value - previous.value
-        if (days > 0) "+$delta · ${delta / days} gal/day" else "+$delta · same day"
-    } else {
-        if (reading.corrected) "corrected" else "ocr"
+    val reading = interval.reading
+    val subtitle = when {
+        interval.delta == null -> if (reading.corrected) "corrected" else "ocr"
+        interval.perDay != null -> "+${interval.delta} · ${interval.perDay.toLong()} gal/day"
+        else -> "+${interval.delta} · same day"
     }
 
     Row(
@@ -113,10 +111,6 @@ private fun ReadingRow(
             .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Box(
-            Modifier.size(8.dp).clip(CircleShape).background(reading.sync.color())
-        )
-        Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f)) {
             Text(
                 "${reading.readingDate}  ${reading.timeOfDay()}",
@@ -143,8 +137,9 @@ private fun Reading.timeOfDay(): String =
         .format(Instant.ofEpochMilli(capturedAtUtc).atZone(ZoneId.systemDefault()))
 
 @Composable
-private fun SyncState.color(): Color = when (this) {
-    SyncState.SYNCED -> Color(0xFF2E6B4A)
-    SyncState.QUEUED, SyncState.SYNCING -> WarnColor
-    SyncState.FAILED -> MaterialTheme.colorScheme.error
+private fun ExportStatus.color(): Color = when (this) {
+    ExportStatus.SAVED -> Color(0xFF2E6B4A)
+    ExportStatus.PENDING, ExportStatus.WRITING -> WarnColor
+    ExportStatus.FAILED -> MaterialTheme.colorScheme.error
+    ExportStatus.IDLE -> LocalContentColor.current
 }

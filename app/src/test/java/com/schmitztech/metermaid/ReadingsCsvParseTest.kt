@@ -2,7 +2,6 @@ package com.schmitztech.metermaid
 
 import com.schmitztech.metermaid.backup.ReadingsCsv
 import com.schmitztech.metermaid.data.Reading
-import com.schmitztech.metermaid.data.SyncState
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
@@ -19,7 +18,7 @@ class ReadingsCsvParseTest {
         Reading(
             id = "ignored", readingDate = date, capturedAtUtc = Instant.parse(at).toEpochMilli(),
             value = value, meterId = meter, ocrRaw = null, minAgreement = null,
-            corrected = false, photoPath = "1756654321.jpg", note = note, sync = SyncState.QUEUED,
+            corrected = false, photoPath = "1756654321.jpg", note = note,
         )
 
     @Test

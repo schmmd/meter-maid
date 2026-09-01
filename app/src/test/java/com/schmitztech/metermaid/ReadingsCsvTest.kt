@@ -2,7 +2,6 @@ package com.schmitztech.metermaid
 
 import com.schmitztech.metermaid.backup.ReadingsCsv
 import com.schmitztech.metermaid.data.Reading
-import com.schmitztech.metermaid.data.SyncState
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -36,7 +35,6 @@ class ReadingsCsvTest {
         corrected = false,
         photoPath = photoPath,
         note = note,
-        sync = SyncState.QUEUED,
     )
 
     private fun rows(csv: String) = csv.trim().lines().map { it.split(",") }

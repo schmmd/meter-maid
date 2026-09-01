@@ -40,6 +40,7 @@ private fun Root() {
     val settings by vm.settings.collectAsState()
     val confirm by vm.confirm.collectAsState()
     val readings by vm.readings.collectAsState()
+    val exportStatus by vm.exportStatus.collectAsState()
     val nav = rememberNavController()
     val camera = rememberPermissionState(Manifest.permission.CAMERA)
 
@@ -81,7 +82,7 @@ private fun Root() {
             HistoryScreen(
                 readings = readings,
                 config = settings.meter,
-                canSync = settings.exportUri.isNotBlank(),
+                syncStatus = exportStatus.takeIf { settings.exportUri.isNotBlank() },
                 onBack = { nav.popBackStack() },
                 onRetrySync = vm::exportNow,
                 onAddManual = { vm.startManualEntry() },

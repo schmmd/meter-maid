@@ -1,12 +1,12 @@
 package com.schmitztech.metermaid.backup
 
 import com.schmitztech.metermaid.data.Reading
+import com.schmitztech.metermaid.data.intervals
 import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
-import java.time.temporal.ChronoUnit
 import java.util.Locale
 
 /**
@@ -56,27 +56,13 @@ object ReadingsCsv {
      * instant in local time, which otherwise makes the output depend on where it runs.
      */
     fun toCsv(readings: List<Reading>, zone: ZoneId = ZoneId.systemDefault()): String {
-        // Chronological, because every derived column is a comparison with the reading
-        // before it. Ties on the same day fall back to when the photo was taken.
-        val ordered = readings.sortedWith(compareBy({ it.readingDate }, { it.capturedAtUtc }))
-        val previousByMeter = HashMap<String, Reading>()
-
         val sb = StringBuilder()
         sb.append(HEADERS.joinToString(",")).append("\r\n")
 
-        for (r in ordered) {
-            // Per meter, so swapping the meter out starts a fresh series instead of
-            // rendering as one enormous negative jump.
-            val prev = previousByMeter[r.meterId]
-            val days = prev?.let {
-                ChronoUnit.DAYS.between(LocalDate.parse(it.readingDate), LocalDate.parse(r.readingDate))
-            }
-            val change = prev?.let { r.value - it.value }
-            val perDay = if (change != null && days != null && days > 0L) {
-                String.format(Locale.ROOT, "%.1f", change.toDouble() / days)
-            } else {
-                ""
-            }
+        // Chronological with a per-meter baseline, same walk as every other surface.
+        for (interval in readings.intervals()) {
+            val r = interval.reading
+            val perDay = interval.perDay?.let { String.format(Locale.ROOT, "%.1f", it) } ?: ""
 
             sb.append(
                 listOf(
@@ -89,16 +75,14 @@ object ReadingsCsv {
                     r.value.toString(),
                     if (r.corrected) "corrected" else "ocr",
                     r.note,
-                    change?.toString() ?: "new meter",
-                    days?.toString() ?: "",
+                    interval.delta?.toString() ?: "new meter",
+                    interval.days?.toString() ?: "",
                     perDay,
                     // Filename only. The absolute path is app-private and meaningless
                     // off the device; the name is what ties a row to its JPEG.
                     r.photoPath.substringAfterLast('/'),
                 ).joinToString(",", transform = ::escape),
             ).append("\r\n")
-
-            previousByMeter[r.meterId] = r
         }
         return sb.toString()
     }

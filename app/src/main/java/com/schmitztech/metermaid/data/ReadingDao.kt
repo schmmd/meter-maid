@@ -37,10 +37,6 @@ interface ReadingDao {
     @Query("SELECT * FROM readings")
     suspend fun allOnce(): List<Reading>
 
-    /** The export rewrites the whole file, so rows move to [state] together or not at all. */
-    @Query("UPDATE readings SET sync = :state WHERE sync != :state")
-    suspend fun markAll(state: SyncState)
-
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsert(reading: Reading)
 

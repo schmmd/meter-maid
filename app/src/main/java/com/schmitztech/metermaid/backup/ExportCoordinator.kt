@@ -4,15 +4,18 @@ import android.net.Uri
 import com.schmitztech.metermaid.data.Reading
 import com.schmitztech.metermaid.data.Repository
 import com.schmitztech.metermaid.data.SettingsStore
-import com.schmitztech.metermaid.data.SyncState
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -20,6 +23,14 @@ import kotlinx.coroutines.withContext
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+
+/**
+ * Whether the chosen file currently reflects the log. One value for the whole log,
+ * because the export rewrites the whole file — there is no such thing as one reading
+ * being saved while another is not. Replaces the per-row SyncState column, whose
+ * bookkeeping wrote to the very table that triggers the export.
+ */
+enum class ExportStatus { IDLE, PENDING, WRITING, SAVED, FAILED }
 
 /**
  * Writes the log to the file the user picked, replacing the Apps Script endpoint.
@@ -43,17 +54,29 @@ class ExportCoordinator(
     private var retryJob: Job? = null
     private var retryDelayMs = FIRST_RETRY_MS
 
+    private val _status = MutableStateFlow(ExportStatus.IDLE)
+    val status: StateFlow<ExportStatus> = _status.asStateFlow()
+
     @OptIn(FlowPreview::class)
     fun start() {
         scope.launch {
             repository.readings
+                // Before the debounce, so a fresh save shows as pending immediately
+                // rather than after the three-second settle.
+                .onEach { _status.value = ExportStatus.PENDING }
                 .debounce(3_000)
                 .collect { readings ->
                     val current = settings.settings.first()
-                    if (!current.autoExport || current.exportUri.isBlank()) return@collect
+                    if (!current.autoExport || current.exportUri.isBlank()) {
+                        _status.value = ExportStatus.IDLE
+                        return@collect
+                    }
                     // An empty log overwriting a file full of readings is far more likely
                     // to be a bad restore or a wiped database than a deliberate erase.
-                    if (readings.isEmpty()) return@collect
+                    if (readings.isEmpty()) {
+                        _status.value = ExportStatus.IDLE
+                        return@collect
+                    }
                     write(Uri.parse(current.exportUri), readings, auto = true)
                 }
         }
@@ -140,25 +163,23 @@ class ExportCoordinator(
         // the file held. There is no case where writing a header over someone's readings
         // is what they meant.
         if (readings.isEmpty()) {
+            _status.value = ExportStatus.IDLE
             return@withLock "Nothing to save yet — no readings recorded."
                 .also { settings.setLastExport(it, hash = null) }
         }
 
         val csv = withContext(Dispatchers.Default) { ReadingsCsv.toCsv(readings) }
 
-        // Hashed on the CSV, not on the readings: stamping rows SYNCED below changes the
-        // rows and re-fires this flow, but it does not change the file, so hashing the
-        // rows would spend a second pointless write settling every save. A manual "Save
-        // now" still writes regardless — the user asked for it.
+        // An edit that changes nothing — a date nudged and nudged back — produces the
+        // same bytes; skipping the write keeps a no-op edit from spinning the disk.
+        // A manual "Save now" still writes regardless: the user asked for it.
         val hash = csv.hashCode()
         if (auto && hash == settings.settings.first().lastExportHash) {
-            // The file already holds these bytes, so the rows are as saved as a write
-            // would leave them. An edit that changes nothing re-stamps its row QUEUED,
-            // and without this it would show unsynced forever. Settling an already
-            // settled log updates no rows, so the flow does not re-fire.
-            repository.markAll(SyncState.SYNCED)
+            _status.value = ExportStatus.SAVED
             return@withLock ""
         }
+
+        _status.value = ExportStatus.WRITING
 
         // A copy the app owns before touching the one it doesn't: SAF gives no rename
         // step for a single-document grant, so the remote write truncates in place and
@@ -169,7 +190,7 @@ class ExportCoordinator(
             .fold(
                 onSuccess = {
                     retryDelayMs = FIRST_RETRY_MS
-                    repository.markAll(SyncState.SYNCED)
+                    _status.value = ExportStatus.SAVED
                     val verb = if (auto) "Saved" else "Exported"
                     "$verb ${readings.size} readings · ${now()}"
                         .also { settings.setLastExport(it, hash) }
@@ -177,7 +198,7 @@ class ExportCoordinator(
                 onFailure = { t ->
                     // Otherwise the screen shows the last success forever while every
                     // write fails — the file moved in Drive, or the grant expired.
-                    repository.markAll(SyncState.FAILED)
+                    _status.value = ExportStatus.FAILED
                     if (auto) scheduleRetry()
                     "Export failed · ${now()}: ${t.message ?: t.javaClass.simpleName}"
                         .also { settings.setLastExport(it, hash = null) }
@@ -186,11 +207,10 @@ class ExportCoordinator(
     }
 
     /**
-      * A failed write left to Room's invalidation retries exactly once: the second
-      * markAll(FAILED) updates no rows, fires no trigger, and the flow goes silent until
-      * the next edit. This keeps trying on its own clock instead, backing off so an
-      * expired grant does not spin. A retry that finds the log already saved falls into
-      * the hash-skip above and does nothing.
+      * The readings flow only fires on actual data changes, so a failed write would
+      * otherwise sit failed until the next edit. This keeps trying on its own clock,
+      * backing off so an expired grant does not spin. A retry that finds the log
+      * already saved falls into the hash-skip above and does nothing.
       */
     private suspend fun scheduleRetry() {
         // A failing retry lands back here; cancelling the job we are running inside

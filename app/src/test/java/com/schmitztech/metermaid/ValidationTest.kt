@@ -2,7 +2,6 @@ package com.schmitztech.metermaid
 
 import com.schmitztech.metermaid.data.MeterConfig
 import com.schmitztech.metermaid.data.Reading
-import com.schmitztech.metermaid.data.SyncState
 import com.schmitztech.metermaid.util.Severity
 import com.schmitztech.metermaid.util.Validation
 import org.junit.Assert.assertEquals
@@ -17,7 +16,7 @@ class ValidationTest {
     private fun reading(date: String, value: Long) = Reading(
         id = "x", readingDate = date, capturedAtUtc = 0L, value = value,
         meterId = config.meterId, ocrRaw = null, minAgreement = null, corrected = false,
-        photoPath = "", note = "", sync = SyncState.SYNCED,
+        photoPath = "", note = "",
     )
 
     @Test
