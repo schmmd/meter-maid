@@ -48,6 +48,24 @@ class ExportCoordinator(
         }
     }
 
+    /**
+      * Reads a spreadsheet into the log. Used to seed a new phone from the old one's file.
+      *
+      * Nothing is deleted: rows already held are skipped rather than replaced, so this is
+      * safe to run twice and safe to run against a file that only partly overlaps.
+      */
+    suspend fun importFrom(uri: Uri): String {
+        val text = saf.readText(uri)
+        // Parsed before anything is written, so an unrecognised file fails with the log
+        // untouched instead of half-importing.
+        val parsed = withContext(Dispatchers.Default) { ReadingsCsv.parse(text) }
+        val added = repository.importReadings(parsed)
+        val skipped = parsed.size - added
+        val tail = if (skipped > 0) " ($skipped already held)" else ""
+        return "Imported $added of ${parsed.size} readings$tail · ${now()}"
+            .also { settings.setLastExport(it, hash = null) }
+    }
+
     /** One-off write to [uri], used by "Save now" and when a target is first chosen. */
     suspend fun exportNow(uri: Uri): String {
         val readings = repository.allOnce()

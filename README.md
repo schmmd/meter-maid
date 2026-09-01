@@ -74,6 +74,9 @@ In **Settings → Spreadsheet**:
 - **Save after every reading** — rewrites the whole file a few seconds after anything
   changes. Access to the file is persisted, so this survives a restart.
 - **Save now** — writes immediately.
+- **Import…** — reads a spreadsheet back in, to seed a new phone from the old one's file.
+  Readings already held are skipped, matched on meter plus capture timestamp, so it is
+  safe to run twice or against a file that only partly overlaps. Nothing is deleted.
 
 Because access is granted per-file by the picker, the app declares no network permission
 at all.
@@ -133,8 +136,8 @@ was swapped out for PP-OCRv4 behind it without any other file changing shape.
 ./gradlew testDebugUnitTest
 ```
 
-33 tests covering the burst vote, the register arithmetic, the validation rules, the
-derived spreadsheet columns and the drum assignment. The vote
+42 tests covering the burst vote, the register arithmetic, the validation rules, the
+spreadsheet columns in both directions, and the drum assignment. The vote
 cases are transcribed from real OCR output on the meter photos — including the jitter
 burst that caught a false-confidence bug: dividing agreement by *surviving* frames
 instead of *attempted* ones reported certainty in a wrong digit.

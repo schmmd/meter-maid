@@ -33,6 +33,11 @@ class SafFile(private val context: Context) {
             ?: error("Could not open the selected file for writing.")
     }
 
+    suspend fun readText(uri: Uri): String = withContext(Dispatchers.IO) {
+        resolver.openInputStream(uri)?.use { it.readBytes().toString(Charsets.UTF_8) }
+            ?: error("Could not open the selected file for reading.")
+    }
+
     /** Best-effort display name, off the main thread: for a cloud file this hits the network. */
     suspend fun displayName(uri: Uri): String? = withContext(Dispatchers.IO) {
         runCatching {

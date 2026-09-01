@@ -91,6 +91,7 @@ private fun Root() {
             SettingsScreen(
                 settings = settings,
                 onChooseExportTarget = vm::chooseExportTarget,
+                onImport = vm::importFrom,
                 onToggleAutoExport = vm::setAutoExport,
                 onExportNow = vm::exportNow,
                 onSaveMeter = vm::saveMeter,

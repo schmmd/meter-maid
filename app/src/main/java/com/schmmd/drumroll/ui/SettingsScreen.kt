@@ -22,6 +22,7 @@ import com.schmmd.drumroll.data.Settings
 fun SettingsScreen(
     settings: Settings,
     onChooseExportTarget: (Uri) -> Unit,
+    onImport: (Uri) -> Unit,
     onToggleAutoExport: (Boolean) -> Unit,
     onExportNow: () -> Unit,
     onSaveMeter: (MeterConfig) -> Unit,
@@ -38,6 +39,10 @@ fun SettingsScreen(
     val openFile = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenDocument(),
     ) { uri -> uri?.let(onChooseExportTarget) }
+
+    val importFile = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument(),
+    ) { uri -> uri?.let(onImport) }
 
     var drums by remember(settings.meter) { mutableStateOf(settings.meter.drumCount.toString()) }
     var zeros by remember(settings.meter) { mutableStateOf(settings.meter.trailingZeros.toString()) }
@@ -109,10 +114,21 @@ fun SettingsScreen(
                 )
             }
 
-            OutlinedButton(
-                onClick = onExportNow,
-                enabled = settings.exportUri.isNotBlank(),
-            ) { Text("Save now") }
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                OutlinedButton(
+                    onClick = onExportNow,
+                    enabled = settings.exportUri.isNotBlank(),
+                ) { Text("Save now") }
+                OutlinedButton(onClick = { importFile.launch(arrayOf("*/*")) }) {
+                    Text("Import…")
+                }
+            }
+            Text(
+                "Import reads a spreadsheet back in to seed a new phone. Readings already " +
+                    "held are skipped, so it is safe to run twice.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
 
             HorizontalDivider()
 
