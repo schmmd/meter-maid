@@ -73,8 +73,12 @@ fun ConfirmScreen(
                 Button(
                     onClick = onSave,
                     enabled = !blocked,
+                    // Scaffold insets the body but lays the bottom bar flush to the
+                    // screen edge, so without this the gesture/button bar sits on top of
+                    // the one control the screen exists for.
                     modifier = Modifier
                         .fillMaxWidth()
+                        .navigationBarsPadding()
                         .padding(16.dp)
                         .height(52.dp),
                 ) { Text("Save reading", fontSize = 16.sp) }
