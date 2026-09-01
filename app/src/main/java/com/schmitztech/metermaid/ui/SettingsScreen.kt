@@ -21,7 +21,8 @@ import com.schmitztech.metermaid.data.Settings
 @Composable
 fun SettingsScreen(
     settings: Settings,
-    onChooseExportTarget: (Uri) -> Unit,
+    onCreateTarget: (Uri) -> Unit,
+    onUseExistingTarget: (Uri) -> Unit,
     onImport: (Uri) -> Unit,
     onToggleAutoExport: (Boolean) -> Unit,
     onExportNow: () -> Unit,
@@ -32,13 +33,13 @@ fun SettingsScreen(
     // Creates a new spreadsheet file wherever the picker offers — Drive, local, Dropbox.
     val createFile = rememberLauncherForActivityResult(
         ActivityResultContracts.CreateDocument(ReadingsCsv.MIME),
-    ) { uri -> uri?.let(onChooseExportTarget) }
+    ) { uri -> uri?.let(onCreateTarget) }
 
     // Anything, rather than text/csv: Drive lists files with unhelpful MIME types and a
     // filtered picker hides the very file the user exported last time.
     val openFile = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenDocument(),
-    ) { uri -> uri?.let(onChooseExportTarget) }
+    ) { uri -> uri?.let(onUseExistingTarget) }
 
     val importFile = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenDocument(),
@@ -93,6 +94,14 @@ fun SettingsScreen(
                     Text("Use existing…")
                 }
             }
+            Text(
+                "\u201cUse existing\u201d only links the file — it is not read or " +
+                    "overwritten until you import or save.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Row {
+            }
 
             Row(
                 Modifier.fillMaxWidth(),
@@ -114,21 +123,36 @@ fun SettingsScreen(
                 )
             }
 
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                OutlinedButton(
-                    onClick = onExportNow,
-                    enabled = settings.exportUri.isNotBlank(),
-                ) { Text("Save now") }
-                OutlinedButton(onClick = { importFile.launch(arrayOf("*/*")) }) {
-                    Text("Import…")
-                }
-            }
+            OutlinedButton(
+                onClick = onExportNow,
+                enabled = settings.exportUri.isNotBlank(),
+            ) { Text("Save now") }
+
+            HorizontalDivider()
+
+            Text("Import", style = MaterialTheme.typography.titleSmall)
             Text(
-                "Import reads a spreadsheet back in to seed a new phone. Readings already " +
-                    "held are skipped, so it is safe to run twice.",
+                "Reads a spreadsheet back in to seed a new phone. Readings already held " +
+                    "are skipped, so it is safe to run twice, and nothing is deleted.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+            OutlinedButton(onClick = { importFile.launch(arrayOf("*/*")) }) {
+                Text("Import…")
+            }
+            // Beside the button that caused it: this used to land in the export status
+            // above, where an import failure read as a spreadsheet problem.
+            if (settings.lastImport.isNotBlank()) {
+                Text(
+                    settings.lastImport,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = if (settings.lastImport.startsWith("Import failed")) {
+                        MaterialTheme.colorScheme.error
+                    } else {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    },
+                )
+            }
 
             HorizontalDivider()
 

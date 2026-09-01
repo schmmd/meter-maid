@@ -28,6 +28,7 @@ data class Settings(
     val exportName: String = "",
     val autoExport: Boolean = false,
     val lastExport: String = "",
+    val lastImport: String = "",
     val lastExportHash: Int = 0,
     val meter: MeterConfig = MeterConfig(),
     val roi: Roi = Roi(),
@@ -50,6 +51,11 @@ class SettingsStore(private val context: Context) {
     suspend fun setLastExport(label: String, hash: Int?) = context.dataStore.edit {
         it[K_LAST_EXPORT] = label
         if (hash != null) it[K_LAST_HASH] = hash
+    }
+
+    /** Kept apart from the export label so a failure is reported where it happened. */
+    suspend fun setLastImport(label: String) = context.dataStore.edit {
+        it[K_LAST_IMPORT] = label
     }
 
     suspend fun setRoi(roi: Roi) = context.dataStore.edit {
@@ -79,6 +85,7 @@ class SettingsStore(private val context: Context) {
             exportName = this[K_EXPORT_NAME].orEmpty(),
             autoExport = (this[K_AUTO_EXPORT] ?: 0) == 1,
             lastExport = this[K_LAST_EXPORT].orEmpty(),
+            lastImport = this[K_LAST_IMPORT].orEmpty(),
             lastExportHash = this[K_LAST_HASH] ?: 0,
             meter = MeterConfig(
                 meterId = this[K_METER_ID] ?: defaults.meterId,
@@ -104,6 +111,7 @@ class SettingsStore(private val context: Context) {
         val K_EXPORT_NAME = stringPreferencesKey("export_name")
         val K_AUTO_EXPORT = intPreferencesKey("auto_export")
         val K_LAST_EXPORT = stringPreferencesKey("last_export")
+        val K_LAST_IMPORT = stringPreferencesKey("last_import")
         val K_LAST_HASH = intPreferencesKey("last_export_hash")
         val K_METER_ID = stringPreferencesKey("meter_id")
         val K_DRUMS = intPreferencesKey("drums")

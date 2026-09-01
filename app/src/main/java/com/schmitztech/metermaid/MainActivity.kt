@@ -95,7 +95,8 @@ private fun Root() {
         composable("settings") {
             SettingsScreen(
                 settings = settings,
-                onChooseExportTarget = vm::chooseExportTarget,
+                onCreateTarget = { vm.chooseExportTarget(it, writeNow = true) },
+                onUseExistingTarget = { vm.chooseExportTarget(it, writeNow = false) },
                 onImport = vm::importFrom,
                 onToggleAutoExport = vm::setAutoExport,
                 onExportNow = vm::exportNow,

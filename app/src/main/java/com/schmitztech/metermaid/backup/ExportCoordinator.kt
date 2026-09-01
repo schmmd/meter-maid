@@ -63,7 +63,7 @@ class ExportCoordinator(
         val skipped = parsed.size - added
         val tail = if (skipped > 0) " ($skipped already held)" else ""
         return "Imported $added of ${parsed.size} readings$tail · ${now()}"
-            .also { settings.setLastExport(it, hash = null) }
+            .also { settings.setLastImport(it) }
     }
 
     /** One-off write to [uri], used by "Save now" and when a target is first chosen. */
@@ -72,12 +72,24 @@ class ExportCoordinator(
         return write(uri, readings, auto = false)
     }
 
-    /** Adopts [uri] as the recurring target, persists access, and writes immediately. */
-    suspend fun setTarget(uri: Uri): String {
+    /**
+      * Adopts [uri] as the recurring target.
+      *
+      * [writeNow] must be false for a file that already exists. Writing on adopt made
+      * sense for a file this app had just created and is empty by definition; pointed at
+      * an existing spreadsheet on a fresh install it published an empty log straight over
+      * the readings the user was trying to reach — losing exactly what they came for.
+      */
+    suspend fun setTarget(uri: Uri, writeNow: Boolean): String {
         val persisted = saf.persist(uri)
         settings.setExportTarget(uri.toString(), saf.displayName(uri))
         settings.setAutoExport(true)
-        val status = exportNow(uri)
+        val status = if (writeNow) {
+            exportNow(uri)
+        } else {
+            "Linked to ${saf.displayName(uri) ?: "the file"}. Import to load what it holds."
+                .also { settings.setLastExport(it, hash = null) }
+        }
         // Without a persisted grant the file works now but not after a restart. Better to
         // say so than to leave the switch looking healthy until writes silently stop.
         if (persisted) return status
@@ -88,6 +100,14 @@ class ExportCoordinator(
     private suspend fun write(uri: Uri, readings: List<Reading>, auto: Boolean): String {
         // Building the CSV is CPU work and the one-off path is called from the main
         // thread; only the file write itself was already off it.
+        // An empty log is never worth publishing, and publishing it destroys whatever
+        // the file held. There is no case where writing a header over someone's readings
+        // is what they meant.
+        if (readings.isEmpty()) {
+            return "Nothing to save yet — no readings recorded."
+                .also { settings.setLastExport(it, hash = null) }
+        }
+
         val csv = withContext(Dispatchers.Default) { ReadingsCsv.toCsv(readings) }
 
         // Hashed on the CSV, not on the readings: stamping rows SYNCED below changes the

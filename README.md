@@ -68,9 +68,10 @@ same system picker you get from any "Save to…" sheet.
 
 In **Settings → Spreadsheet**:
 
-- **Choose a file…** — creates `well-readings.csv` wherever the picker offers. Pick
-  Google Drive to keep it in the cloud; local storage and Dropbox work identically.
-- **Use existing…** — point at a file you exported before and carry on appending to it.
+- **New file…** — creates `well-readings.csv` wherever the picker offers. Pick Google
+  Drive to keep it in the cloud; local storage and Dropbox work identically.
+- **Use existing…** — links a file you exported before. It is *not* read or written at
+  this point: to load what it holds, use **Import…**.
 - **Save after every reading** — rewrites the whole file a few seconds after anything
   changes. Access to the file is persisted, so this survives a restart.
 - **Save now** — writes immediately.

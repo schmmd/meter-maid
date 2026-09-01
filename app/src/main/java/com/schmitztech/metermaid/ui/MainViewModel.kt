@@ -268,12 +268,12 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     /** Seeds the log from a spreadsheet. Existing readings are left alone. */
     fun importFrom(uri: Uri) = viewModelScope.launch {
         runCatching { application.export.importFrom(uri) }
-            .onFailure { settingsStore.setLastExport("Import failed: ${it.message}", hash = null) }
+            .onFailure { settingsStore.setLastImport("Import failed: ${it.message}") }
     }
 
     /** The user picked a file in the system picker; adopt it and write to it immediately. */
-    fun chooseExportTarget(uri: Uri) = viewModelScope.launch {
-        application.export.setTarget(uri)
+    fun chooseExportTarget(uri: Uri, writeNow: Boolean) = viewModelScope.launch {
+        application.export.setTarget(uri, writeNow)
     }
 
     fun setAutoExport(enabled: Boolean) = viewModelScope.launch {
