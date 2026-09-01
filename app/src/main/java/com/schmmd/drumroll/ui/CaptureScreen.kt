@@ -1,0 +1,189 @@
+package com.schmmd.drumroll.ui
+
+import android.annotation.SuppressLint
+import android.graphics.Bitmap
+import androidx.camera.core.CameraSelector
+import androidx.camera.core.ImageAnalysis
+import androidx.camera.core.Preview
+import androidx.camera.lifecycle.ProcessCameraProvider
+import androidx.camera.view.PreviewView
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.Rotate90DegreesCw
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.viewinterop.AndroidView
+import androidx.core.content.ContextCompat
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import com.schmmd.drumroll.data.Roi
+import com.schmmd.drumroll.ocr.FrameBuffer
+import com.schmmd.drumroll.ocr.FrameCapture
+import kotlin.coroutines.resume
+import kotlinx.coroutines.suspendCancellableCoroutine
+import java.util.concurrent.Executors
+
+/**
+ * The app's front door. Opens straight to the viewfinder — no home screen, no menu —
+ * because every extra tap here is a reason not to take the reading at all.
+ */
+@SuppressLint("UnsafeOptInUsageError")
+@Composable
+fun CaptureScreen(
+    roi: Roi,
+    onRotateGuide: () -> Unit,
+    onCaptured: (frames: List<Bitmap>) -> Unit,
+    onHistory: () -> Unit,
+    onSettings: () -> Unit,
+) {
+    val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
+    val frameBuffer = remember { FrameBuffer() }
+    val executor = remember { Executors.newSingleThreadExecutor() }
+    var previewView by remember { mutableStateOf<PreviewView?>(null) }
+
+    DisposableEffect(Unit) {
+        onDispose {
+            executor.shutdown()
+            frameBuffer.clear()
+        }
+    }
+
+    LaunchedEffect(previewView, roi) {
+        val view = previewView ?: return@LaunchedEffect
+        val provider = suspendCancellableCoroutine { cont ->
+            val future = ProcessCameraProvider.getInstance(context)
+            future.addListener(
+                { cont.resume(future.get()) },
+                ContextCompat.getMainExecutor(context),
+            )
+        }
+
+        val preview = Preview.Builder().build().also {
+            it.setSurfaceProvider(view.surfaceProvider)
+        }
+
+        val analysis = ImageAnalysis.Builder()
+            .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
+            .setOutputImageFormat(ImageAnalysis.OUTPUT_IMAGE_FORMAT_RGBA_8888)
+            .build()
+            .apply {
+                setAnalyzer(executor) { proxy ->
+                    try {
+                        val full = proxy.toBitmap()
+                        FrameCapture.cropToRoi(full, roi)?.let(frameBuffer::offer)
+                        if (!full.isRecycled) full.recycle()
+                    } catch (_: Exception) {
+                        // A dropped frame is not worth surfacing; the burst has four more.
+                    } finally {
+                        proxy.close()
+                    }
+                }
+            }
+
+        provider.unbindAll()
+        provider.bindToLifecycle(
+            lifecycleOwner,
+            CameraSelector.DEFAULT_BACK_CAMERA,
+            preview,
+            analysis,
+        )
+    }
+
+    Box(Modifier.fillMaxSize().background(Color.Black)) {
+        AndroidView(
+            factory = { ctx ->
+                PreviewView(ctx).apply {
+                    scaleType = PreviewView.ScaleType.FILL_CENTER
+                    previewView = this
+                }
+            },
+            modifier = Modifier.fillMaxSize(),
+        )
+
+        // The guide rectangle. Everything outside it is discarded before OCR, which is
+        // the single highest-value step in the whole pipeline.
+        Canvas(Modifier.fillMaxSize()) {
+            val rect = androidx.compose.ui.geometry.Rect(
+                offset = Offset(roi.left * size.width, roi.top * size.height),
+                size = Size(roi.width * size.width, roi.height * size.height),
+            )
+            val scrim = Color(0x99000000)
+            drawRect(scrim, size = Size(size.width, rect.top))
+            drawRect(scrim, topLeft = Offset(0f, rect.bottom),
+                size = Size(size.width, size.height - rect.bottom))
+            drawRect(scrim, topLeft = Offset(0f, rect.top),
+                size = Size(rect.left, rect.height))
+            drawRect(scrim, topLeft = Offset(rect.right, rect.top),
+                size = Size(size.width - rect.right, rect.height))
+            drawRect(
+                color = Color(0xFF55B7AD),
+                topLeft = rect.topLeft,
+                size = rect.size,
+                style = Stroke(width = 4f),
+            )
+        }
+
+        Text(
+            "Line the drums up inside the frame",
+            color = Color.White.copy(alpha = 0.75f),
+            fontSize = 14.sp,
+            modifier = Modifier.align(Alignment.TopCenter).padding(top = 48.dp),
+        )
+
+        Row(
+            modifier = Modifier.align(Alignment.TopEnd).padding(16.dp),
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            IconButton(onClick = onRotateGuide) {
+                Icon(Icons.Default.Rotate90DegreesCw, "Rotate guide", tint = Color.White)
+            }
+            IconButton(onClick = onHistory) {
+                Icon(Icons.Default.History, "History", tint = Color.White)
+            }
+            IconButton(onClick = onSettings) {
+                Icon(Icons.Default.Settings, "Settings", tint = Color.White)
+            }
+        }
+
+        Text(
+            "${roi.rotationDegrees}°",
+            color = Color.White.copy(alpha = 0.6f),
+            fontFamily = FontFamily.Monospace,
+            fontSize = 12.sp,
+            modifier = Modifier.align(Alignment.TopEnd).padding(top = 64.dp, end = 20.dp),
+        )
+
+        Box(
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(bottom = 48.dp)
+                .size(76.dp)
+                .clip(CircleShape)
+                .background(Color.White.copy(alpha = 0.25f)),
+            contentAlignment = Alignment.Center,
+        ) {
+            Surface(
+                onClick = { onCaptured(frameBuffer.snapshot()) },
+                shape = CircleShape,
+                color = Color.White,
+                modifier = Modifier.size(60.dp),
+            ) {}
+        }
+    }
+}

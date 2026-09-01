@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- A meter register: six drums and a sweep needle. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp" android:height="108dp"
+    android:viewportWidth="108" android:viewportHeight="108">
+    <path android:fillColor="#F8FAF9" android:pathData="M26,46h56v16h-56z" />
+    <path android:fillColor="#242E2B" android:pathData="M62,46h20v16h-20z" />
+    <path android:strokeColor="#242E2B" android:strokeWidth="1.5"
+        android:pathData="M35,46v16 M44,46v16 M53,46v16 M62,46v16 M72,46v16" />
+    <path android:fillColor="#C0392B" android:pathData="M53,32h2v44h-2z" />
+</vector>

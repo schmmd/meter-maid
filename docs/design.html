@@ -1,0 +1,1068 @@
+<title>Drumroll Well Meter</title>
+<style>
+  :root {
+    --ground:   #EBF0EF;
+    --surface:  #F8FAF9;
+    --surface2: #E1E8E6;
+    --ink:      #14201F;
+    --muted:    #566564;
+    --line:     #C9D5D2;
+    --line-soft:#DCE4E2;
+    --accent:   #0F6E68;
+    --accent-w: #0B5450;
+    --brass:    #A97C2E;
+    --drum-dark:#242E2B;
+    --drum-lt:  #DCDAD2;
+    --ok:       #2E6B4A;
+    --warn:     #97650F;
+    --crit:     #A33A2C;
+    --shadow:   0 1px 2px rgba(20,32,31,.06), 0 8px 24px -16px rgba(20,32,31,.28);
+
+    --f-display: "Helvetica Neue", "Segoe UI", system-ui, -apple-system, sans-serif;
+    --f-body: Charter, "Bitstream Charter", "Iowan Old Style", "Palatino Linotype", Georgia, serif;
+    --f-mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground:   #0F1716;
+      --surface:  #16211F;
+      --surface2: #1E2C2A;
+      --ink:      #E2EAE8;
+      --muted:    #92A3A0;
+      --line:     #2C3D3A;
+      --line-soft:#233230;
+      --accent:   #55B7AD;
+      --accent-w: #7BCDC4;
+      --brass:    #D7AC55;
+      --drum-dark:#080F0E;
+      --drum-lt:  #C8CCC4;
+      --ok:       #5FB183;
+      --warn:     #D2A03F;
+      --crit:     #E07A6B;
+      --shadow:   0 1px 2px rgba(0,0,0,.4), 0 8px 24px -16px rgba(0,0,0,.9);
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground:   #0F1716;
+    --surface:  #16211F;
+    --surface2: #1E2C2A;
+    --ink:      #E2EAE8;
+    --muted:    #92A3A0;
+    --line:     #2C3D3A;
+    --line-soft:#233230;
+    --accent:   #55B7AD;
+    --accent-w: #7BCDC4;
+    --brass:    #D7AC55;
+    --drum-dark:#080F0E;
+    --drum-lt:  #C8CCC4;
+    --ok:       #5FB183;
+    --warn:     #D2A03F;
+    --crit:     #E07A6B;
+    --shadow:   0 1px 2px rgba(0,0,0,.4), 0 8px 24px -16px rgba(0,0,0,.9);
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    background: var(--ground);
+    color: var(--ink);
+    font-family: var(--f-body);
+    font-size: 17px;
+    line-height: 1.62;
+    margin: 0;
+    -webkit-font-smoothing: antialiased;
+  }
+  a { color: var(--accent-w); text-underline-offset: 3px; }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 2px; }
+
+  .wrap {
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 0 28px 120px;
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0 56px;
+  }
+  @media (min-width: 1040px) {
+    .wrap { grid-template-columns: 196px minmax(0, 1fr); }
+    .toc { display: block; }
+  }
+
+  .toc {
+    display: none;
+    grid-column: 1;
+    position: sticky;
+    top: 0;
+    align-self: start;
+    padding-top: 96px;
+    font-family: var(--f-display);
+    font-size: 12.5px;
+    line-height: 1.5;
+  }
+  .toc ol { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 9px; }
+  .toc a { color: var(--muted); text-decoration: none; display: block; border-left: 2px solid var(--line-soft); padding-left: 11px; }
+  .toc a:hover { color: var(--accent-w); border-left-color: var(--accent); }
+  .toc .toc-h { color: var(--ink); letter-spacing: .1em; text-transform: uppercase; font-size: 10.5px; font-weight: 600; margin-bottom: 14px; padding-left: 13px; }
+
+  .main { grid-column: 1; min-width: 0; }
+  @media (min-width: 1040px) { .main { grid-column: 2; } }
+
+  .hero { padding: 88px 0 60px; border-bottom: 1px solid var(--line); }
+  .eyebrow {
+    font-family: var(--f-display);
+    font-size: 11px; font-weight: 600; letter-spacing: .16em;
+    text-transform: uppercase; color: var(--accent-w); margin: 0 0 22px;
+  }
+  h1 {
+    font-family: var(--f-display);
+    font-size: clamp(38px, 6vw, 60px);
+    line-height: 1.03; letter-spacing: -.028em; font-weight: 700;
+    margin: 0 0 24px; max-width: 15ch; text-wrap: balance;
+  }
+  .lede { font-size: 20px; line-height: 1.55; color: var(--muted); max-width: 60ch; margin: 0; }
+  .lede strong { color: var(--ink); font-weight: 600; }
+
+  /* the Rockwell register: four dark-on-light drums, two light-on-dark, one painted zero */
+  .register {
+    display: inline-flex;
+    gap: 2px;
+    padding: 13px 15px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 5px;
+    box-shadow: var(--shadow);
+    margin: 40px 0 6px;
+    max-width: 100%;
+    overflow-x: auto;
+  }
+  .drum {
+    position: relative;
+    width: 1.02em; height: 1.5em;
+    overflow: hidden;
+    background: var(--drum-lt);
+    font-family: var(--f-mono);
+    font-size: clamp(27px, 5.2vw, 40px);
+    font-variant-numeric: tabular-nums;
+  }
+  .drum.dk { background: var(--drum-dark); }
+  .drum.fixed { background: var(--drum-dark); }
+  .drum .col {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column; align-items: center;
+    color: var(--drum-dark);
+    transform: translateY(var(--y, 0));
+    animation: settle .72s cubic-bezier(.19,.85,.24,1) both;
+    animation-delay: calc(var(--i) * 62ms);
+  }
+  .drum.dk .col, .drum.fixed .col { color: var(--drum-lt); }
+  .drum .col span { height: 1.5em; line-height: 1.5em; }
+  .drum::after {
+    content: ""; position: absolute; inset: 0; pointer-events: none;
+    background: linear-gradient(180deg, rgba(0,0,0,.34) 0%, rgba(0,0,0,0) 26%, rgba(0,0,0,0) 74%, rgba(0,0,0,.34) 100%);
+  }
+  .needle {
+    position: absolute; left: 50%; top: -14px; bottom: -14px;
+    width: 3px; margin-left: -1.5px; background: #C0392B; border-radius: 2px;
+    z-index: 3; pointer-events: none; opacity: .92;
+  }
+  .reg-holder { position: relative; display: inline-block; max-width: 100%; }
+  @keyframes settle {
+    from { transform: translateY(-165%); }
+    to   { transform: translateY(var(--y, 0)); }
+  }
+  @media (prefers-reduced-motion: reduce) { .drum .col { animation: none; } }
+  .register-cap { font-family: var(--f-display); font-size: 12.5px; color: var(--muted); margin: 0 0 4px; max-width: 62ch; }
+
+  .sec { padding-top: 66px; }
+  .sec > :first-child { margin-top: 0; }
+  h2 {
+    font-family: var(--f-display);
+    font-size: 27px; letter-spacing: -.018em; font-weight: 700;
+    line-height: 1.2; margin: 0 0 8px; text-wrap: balance;
+  }
+  h3 { font-family: var(--f-display); font-size: 17px; font-weight: 650; letter-spacing: -.005em; margin: 40px 0 10px; }
+  .sec-note {
+    font-family: var(--f-display); font-size: 12.5px; color: var(--muted);
+    margin: 0 0 26px; padding-bottom: 18px; border-bottom: 1px solid var(--line-soft);
+  }
+  p, ul, ol { max-width: 68ch; }
+  p { margin: 0 0 18px; }
+  ul, ol { margin: 0 0 18px; padding-left: 22px; }
+  li { margin-bottom: 8px; }
+  li::marker { color: var(--muted); }
+  strong { font-weight: 650; }
+
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 22px 24px; box-shadow: var(--shadow); }
+  .card h3 { margin-top: 0; }
+  .card > :last-child { margin-bottom: 0; }
+  .grid2 { display: grid; grid-template-columns: 1fr; gap: 18px; margin: 26px 0; max-width: 68ch; }
+  @media (min-width: 720px) { .grid2 { grid-template-columns: 1fr 1fr; } }
+
+  .note {
+    border-left: 3px solid var(--accent); background: var(--surface);
+    padding: 15px 20px; margin: 26px 0; max-width: 68ch; border-radius: 0 5px 5px 0;
+  }
+  .note > :last-child { margin-bottom: 0; }
+  .note-label {
+    font-family: var(--f-display); font-size: 10.5px; letter-spacing: .13em;
+    text-transform: uppercase; font-weight: 650; color: var(--accent-w);
+    display: block; margin-bottom: 5px;
+  }
+  .note.caution { border-left-color: var(--warn); }
+  .note.caution .note-label { color: var(--warn); }
+  .note.bad { border-left-color: var(--crit); }
+  .note.bad .note-label { color: var(--crit); }
+
+  .pill {
+    display: inline-block; font-family: var(--f-display); font-size: 10.5px;
+    font-weight: 650; letter-spacing: .08em; text-transform: uppercase;
+    padding: 3px 8px; border-radius: 3px; background: var(--surface2);
+    color: var(--muted); vertical-align: 2px;
+  }
+  .pill.pick { background: var(--accent); color: var(--surface); }
+
+  .steps { list-style: none; padding: 0; margin: 26px 0; max-width: 68ch; counter-reset: s; }
+  .steps > li {
+    counter-increment: s; display: grid; grid-template-columns: 34px minmax(0, 1fr);
+    gap: 0 16px; padding: 0 0 22px; margin: 0;
+  }
+  .steps > li::before {
+    content: counter(s); font-family: var(--f-mono); font-size: 12px; font-weight: 600;
+    color: var(--accent-w); background: var(--surface); border: 1px solid var(--line);
+    border-radius: 50%; width: 26px; height: 26px; display: grid; place-items: center; margin-top: 2px;
+  }
+  .steps h4 { font-family: var(--f-display); font-size: 15.5px; font-weight: 650; margin: 2px 0 5px; }
+  .steps p { margin-bottom: 0; font-size: 16px; }
+
+  .t-scroll { overflow-x: auto; margin: 26px 0; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); }
+  table { border-collapse: collapse; width: 100%; font-size: 15px; min-width: 520px; }
+  th, td { text-align: left; padding: 11px 16px; border-bottom: 1px solid var(--line-soft); vertical-align: top; }
+  th {
+    font-family: var(--f-display); font-size: 10.5px; letter-spacing: .1em;
+    text-transform: uppercase; color: var(--muted); font-weight: 650;
+    background: var(--surface2); border-bottom-color: var(--line);
+  }
+  tbody tr:last-child td { border-bottom: none; }
+  td.num, th.num { font-family: var(--f-mono); font-variant-numeric: tabular-nums; }
+  .yes { color: var(--ok); font-weight: 650; }
+  .no  { color: var(--crit); font-weight: 650; }
+  .mid { color: var(--warn); font-weight: 650; }
+
+  pre {
+    background: var(--surface); border: 1px solid var(--line); border-radius: 6px;
+    padding: 17px 19px; overflow-x: auto; margin: 22px 0; font-size: 13px; line-height: 1.62;
+  }
+  code { font-family: var(--f-mono); }
+  p code, li code, td code { font-size: .875em; background: var(--surface2); padding: 1px 5px; border-radius: 3px; }
+  .cm { color: var(--muted); }
+  .st { color: var(--accent-w); }
+  .kw { color: var(--brass); }
+
+  figure { margin: 34px 0; }
+  .fig-box { overflow-x: auto; background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 20px; }
+  figure svg { display: block; width: 100%; height: auto; min-width: 560px; color: var(--ink); }
+  figcaption {
+    font-family: var(--f-display); font-size: 12.5px; line-height: 1.5;
+    color: var(--muted); margin-top: 12px; max-width: 66ch;
+  }
+  .svg-label { font-family: var(--f-display); font-size: 12px; font-weight: 600; }
+  .svg-sub { font-family: var(--f-display); font-size: 10px; }
+  .svg-band { font-family: var(--f-display); font-size: 9.5px; font-weight: 650; letter-spacing: .12em; text-transform: uppercase; }
+  .svg-mono { font-family: var(--f-mono); font-size: 13px; }
+  .svg-arrowlabel { font-family: var(--f-display); font-size: 9.5px; }
+
+  footer {
+    margin-top: 76px; padding-top: 26px; border-top: 1px solid var(--line);
+    font-family: var(--f-display); font-size: 13px; color: var(--muted); max-width: 68ch;
+  }
+</style>
+
+<div class="wrap">
+  <nav class="toc" aria-label="Contents">
+    <div class="toc-h">Contents</div>
+    <ol>
+      <li><a href="#findings">What the photos showed</a></li>
+      <li><a href="#loop">The loop</a></li>
+      <li><a href="#arch">Architecture</a></li>
+      <li><a href="#ocr">Reading the drums</a></li>
+      <li><a href="#screens">Screens</a></li>
+      <li><a href="#data">Data model</a></li>
+      <li><a href="#sheets">Sheets sync</a></li>
+      <li><a href="#offline">Offline queue</a></li>
+      <li><a href="#rules">Validation rules</a></li>
+      <li><a href="#privacy">Permissions</a></li>
+      <li><a href="#build">Build order</a></li>
+      <li><a href="#open">Open questions</a></li>
+    </ol>
+  </nav>
+
+  <main class="main">
+
+    <header class="hero">
+      <p class="eyebrow">Android app design &middot; tested against your meter</p>
+      <h1>Point at the drums, confirm, done.</h1>
+      <p class="lede">A single-purpose Android app that replaces the photo&#8202;→&#8202;squint&#8202;→&#8202;retype&#8202;→&#8202;spreadsheet chore with one framed shot and one confirmation tap. On-device OCR reads the register; <strong>you stay the final authority on every digit</strong> &mdash; and after measuring it against your own photos, on one digit in particular.</p>
+
+      <p class="register-cap" style="margin-top:44px;">Your Rockwell 3/4&nbsp;T-04, as photographed 24 Oct 2021 &mdash; four dark-on-light drums, two light-on-dark, one painted zero, and the sweep needle straight through the middle</p>
+      <div class="reg-holder">
+        <div class="register" role="img" aria-label="A Rockwell water meter register reading 3 2 4 4 4, then a drum caught between 4 and 5, then a painted fixed zero. The red sweep needle crosses the fourth drum.">
+          <span class="drum" style="--i:0"><span class="col" style="--y:0"><span>3</span><span>4</span></span></span>
+          <span class="drum" style="--i:1"><span class="col" style="--y:0"><span>2</span><span>3</span></span></span>
+          <span class="drum" style="--i:2"><span class="col" style="--y:0"><span>4</span><span>5</span></span></span>
+          <span class="drum" style="--i:3"><span class="col" style="--y:0"><span>4</span><span>5</span></span></span>
+          <span class="drum dk" style="--i:4"><span class="col" style="--y:0"><span>4</span><span>5</span></span></span>
+          <span class="drum dk" style="--i:5"><span class="col" style="--y:-36%"><span>4</span><span>5</span></span></span>
+          <span class="drum fixed" style="--i:6"><span class="col" style="--y:0"><span>0</span><span>0</span></span></span>
+          <span class="needle" style="left:calc(15px + 3.55em)"></span>
+        </div>
+      </div>
+      <p class="register-cap">The sixth drum &mdash; caught mid-roll, light-on-dark, with the needle beside it &mdash; is the entire engineering problem, and the measurements below say so out loud.</p>
+    </header>
+
+    <section class="sec" id="findings">
+      <h2>What the photos showed</h2>
+      <p class="sec-note">15 photos, Nov 2017 &ndash; Oct 2021, run through a general-purpose OCR</p>
+
+      <p>Rather than guess at how on-device OCR would cope, I ran your photos through Apple's Vision text recognizer &mdash; a close analogue of ML Kit's: the same class of general scene-text model, with the same failure modes. The results changed several decisions in this design, and turned up a bug in the voting scheme I had originally written.</p>
+
+      <h3>Your meter, specified</h3>
+      <ul>
+        <li><strong>Rockwell International 3/4&nbsp;T-04, in gallons.</strong> Seven positions: six rotating drums plus a painted trailing zero that never moves.</li>
+        <li><strong>Mixed polarity within one register.</strong> The leading four drums are dark digits on a light ground; the last two are light on dark. There is no single preprocessing pass that suits both.</li>
+        <li><strong>The red sweep needle crosses the digits</strong> at most needle positions, splitting the register visually in two.</li>
+        <li><strong>The dial face is crowded with competing text</strong> &mdash; "Rockwell International", "Pittsburgh, PA 15208", "GALLONS", "3/4 T-04", and the 0&ndash;9 numerals ringing the face.</li>
+        <li><strong>The meter was replaced at least once.</strong> Your July 2019 photo is a different unit entirely &mdash; a Master Meter 5/8" BL, newly installed, reading 0000129.</li>
+        <li><strong>Orientation is arbitrary.</strong> Roughly half your photos have the register running vertically, because of how the meter sits in the crawlspace.</li>
+      </ul>
+
+      <h3>How the OCR did</h3>
+
+      <div class="t-scroll">
+        <table>
+          <thead>
+            <tr><th>Condition</th><th>Result</th><th>What it means</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Whole photo, as shot</td>
+              <td class="no">2 of 15 usable</td>
+              <td>It reads the serial number, "PA 15208", "T-04" and the dial numerals as competing candidates. On the Master Meter photo it confidently returned <code>1041993</code> &mdash; the register said <code>0000129</code>.</td>
+            </tr>
+            <tr>
+              <td>Tight crop, no preprocessing, 1.5&ndash;3&times; upscale</td>
+              <td class="yes">5 of 6 drums right</td>
+              <td>Returned <code>324442</code>, <code>324440</code>, <code>324442</code>. The leading <code>32444</code> is correct and stable.</td>
+            </tr>
+            <tr>
+              <td>The mid-roll drum</td>
+              <td class="no">never right</td>
+              <td>Read as 2, 0, 2 across runs. True value was between 4 and 5.</td>
+            </tr>
+            <tr>
+              <td>Greyscale / contrast / invert</td>
+              <td class="no">returns nothing</td>
+              <td>Every preprocessing pass I proposed made it strictly worse. The mixed polarity means thresholding destroys one half of the register whichever way you push it.</td>
+            </tr>
+            <tr>
+              <td>Aggressive 5&times; upscale</td>
+              <td class="no">degrades to <code>32</code></td>
+              <td>There is a sweet spot around 2&times;, not "bigger is better".</td>
+            </tr>
+            <tr>
+              <td>10 frames with hand-shake jitter</td>
+              <td class="mid">2 usable, 8 discarded</td>
+              <td>Jitter produced <code>1324442</code> (bezel edge read as a leading 1), <code>324</code>&#8202;+&#8202;<code>442</code> as two fragments, <code>441</code> alone, and once a Thai baht sign.</td>
+            </tr>
+            <tr>
+              <td>Reported confidence</td>
+              <td class="no">1.00 when wrong</td>
+              <td>Every incorrect reading above came back at maximum confidence. Model confidence is unusable as a gate here.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="note bad">
+        <span class="note-label">A bug this testing found</span>
+        <p>My original vote counted agreement only among frames that survived a digit-count filter. On the jitter test, 8 of 10 frames were discarded and the surviving 2 agreed &mdash; so it reported <em>unanimous</em> confidence in <code>324442</code>, whose last digit was wrong. Agreement must be measured against <em>frames attempted</em>, not frames surviving, and a minimum survivor count must be enforced. Both fixes are in the <a href="#ocr">corrected pipeline</a>.</p>
+      </div>
+
+      <p>The honest summary: general on-device OCR handles the slow-moving leading digits on your meter well, and cannot read the one drum that is actually in motion. That is a workable result &mdash; but only for a design that treats OCR as a prefill for five digits and asks you for the sixth, rather than one that presents seven digits and hopes.</p>
+
+      <div class="note caution">
+        <span class="note-label">Where this leaves ML Kit</span>
+        <p>You picked on-device, and this design stays on-device &mdash; it is free, offline, private, and instant, which matters in a crawlspace with no signal. But these numbers are why the recognizer sits behind a one-method interface: if the five-digit prefill turns out not to be worth the tap you save, swapping in a cloud vision model is one class and a settings toggle. Milestone&nbsp;3 in the <a href="#build">build order</a> is deliberately the cheapest thing in the plan to throw away.</p>
+      </div>
+    </section>
+
+    <section class="sec" id="loop">
+      <h2>The loop, end to end</h2>
+      <p class="sec-note">What the app has to feel like before anything else matters</p>
+
+      <p>Today the chore is four context switches: phone camera, photo library, mental arithmetic, spreadsheet app. Each one is a place to stop and not come back, which is why the readings aren't regular. The app's only real job is collapsing that into one uninterrupted motion you can finish in a crawlspace.</p>
+
+      <ol class="steps">
+        <li>
+          <h4>Open</h4>
+          <p>The app launches straight into the viewfinder. No home screen, no menu. A quick-settings tile and a home-screen shortcut both land here too.</p>
+        </li>
+        <li>
+          <h4>Frame</h4>
+          <p>A guide rectangle sits over the register, with a rotation control &mdash; because half your photos have it running vertically. You line the drums up inside it; OCR runs on the live preview, so digits appear ghosted under the frame as soon as they resolve.</p>
+        </li>
+        <li>
+          <h4>Shutter</h4>
+          <p>One tap captures a still <em>and</em> banks the last handful of analysis frames. The photo is kept &mdash; it's your audit trail when a number looks wrong three months later, and given what the OCR does to that last drum, you will want it.</p>
+        </li>
+        <li>
+          <h4>Confirm</h4>
+          <p>Six digit boxes. The first five prefilled and usually correct; the last one empty and focused, with the keyboard already up. Today's date, prefilled. The change since your last reading, computed live as you type.</p>
+        </li>
+        <li>
+          <h4>Save</h4>
+          <p>Writes to the phone immediately and returns to the viewfinder. The row reaches your spreadsheet whenever the phone next has signal &mdash; you do not wait for it, and you do not need to remember it.</p>
+        </li>
+      </ol>
+
+      <div class="note">
+        <span class="note-label">The design bet</span>
+        <p>Every second of friction has to come out of <em>your</em> path, not the app's. It's fine for the app to spend a second chewing on five frames of OCR; it's not fine to make you tap through a save dialog, pick a sheet, or wait on a network round trip under the house.</p>
+      </div>
+    </section>
+
+    <section class="sec" id="arch">
+      <h2>Architecture</h2>
+      <p class="sec-note">Where a reading goes from the moment light hits the sensor</p>
+
+      <figure>
+        <div class="fig-box">
+          <svg viewBox="0 0 880 344" role="img" aria-label="A reading flows through capture, cropping to the guide rectangle, five-frame OCR, positional voting and validation on the phone; then through a human confirmation step; then into the local database, a background sync worker, and finally Google Sheets.">
+            <defs>
+              <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+                <path d="M 0 0 L 10 5 L 0 10 z" fill="currentColor"/>
+              </marker>
+              <marker id="ar-a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+                <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--accent)"/>
+              </marker>
+            </defs>
+
+            <text class="svg-band" x="4" y="14" fill="var(--muted)">On the phone &mdash; no network needed</text>
+
+            <g fill="var(--surface2)" stroke="currentColor" stroke-width="1">
+              <rect x="4"   y="26" width="150" height="60" rx="4"/>
+              <rect x="184" y="26" width="150" height="60" rx="4"/>
+              <rect x="364" y="26" width="150" height="60" rx="4"/>
+              <rect x="544" y="26" width="150" height="60" rx="4"/>
+              <rect x="724" y="26" width="150" height="60" rx="4"/>
+            </g>
+            <g class="svg-label" fill="currentColor" text-anchor="middle">
+              <text x="79"  y="50">CameraX</text>
+              <text x="259" y="50">Crop &amp; rotate</text>
+              <text x="439" y="50">ML Kit OCR</text>
+              <text x="619" y="50">Positional vote</text>
+              <text x="799" y="50">Validate</text>
+            </g>
+            <g class="svg-sub" fill="var(--muted)" text-anchor="middle">
+              <text x="79"  y="68">preview + still</text>
+              <text x="259" y="68">2&times;, no thresholding</text>
+              <text x="439" y="68">5 frames, offline</text>
+              <text x="619" y="68">/ frames attempted</text>
+              <text x="799" y="68">vs. last reading</text>
+            </g>
+
+            <g stroke="currentColor" stroke-width="1.4" marker-end="url(#ar)" fill="none">
+              <line x1="156" y1="56" x2="180" y2="56"/>
+              <line x1="336" y1="56" x2="360" y2="56"/>
+              <line x1="516" y1="56" x2="540" y2="56"/>
+              <line x1="696" y1="56" x2="720" y2="56"/>
+            </g>
+            <path d="M 799 88 L 799 122" stroke="var(--accent)" stroke-width="1.6" fill="none" marker-end="url(#ar-a)"/>
+            <text class="svg-arrowlabel" x="791" y="108" fill="var(--accent)" text-anchor="end">5 digits + agreement</text>
+
+            <text class="svg-band" x="4" y="118" fill="var(--accent)">You confirm &mdash; the accuracy guarantee</text>
+            <rect x="4" y="128" width="870" height="70" rx="4" fill="var(--surface)" stroke="var(--accent)" stroke-width="1.6"/>
+            <text class="svg-label" x="24" y="155" fill="currentColor">Confirm screen</text>
+            <text class="svg-sub" x="24" y="176" fill="var(--muted)">leading digits prefilled &middot; the moving drum is always yours to enter &middot; change-per-day computed live</text>
+            <g class="svg-mono" fill="currentColor" text-anchor="middle">
+              <text x="716" y="172">3 2 4 4 4</text>
+            </g>
+            <rect x="766" y="152" width="26" height="28" rx="3" fill="none" stroke="var(--warn)" stroke-width="1.8"/>
+            <text class="svg-mono" x="779" y="172" fill="var(--warn)" text-anchor="middle">?</text>
+            <text class="svg-sub" x="800" y="172" fill="var(--warn)">you</text>
+
+            <path d="M 210 198 L 210 234" stroke="currentColor" stroke-width="1.4" fill="none" marker-end="url(#ar)"/>
+            <text class="svg-arrowlabel" x="220" y="220" fill="var(--muted)">saved locally, always</text>
+
+            <text class="svg-band" x="4" y="228" fill="var(--muted)">Storage &amp; sync</text>
+            <g fill="var(--surface2)" stroke="currentColor" stroke-width="1">
+              <rect x="115" y="240" width="190" height="60" rx="4"/>
+              <rect x="345" y="240" width="190" height="60" rx="4"/>
+            </g>
+            <rect x="575" y="240" width="190" height="60" rx="4" fill="var(--surface)" stroke="currentColor" stroke-width="1" stroke-dasharray="4 3"/>
+            <g class="svg-label" fill="currentColor" text-anchor="middle">
+              <text x="210" y="264">Room database</text>
+              <text x="440" y="264">WorkManager</text>
+              <text x="670" y="264">Google Sheets</text>
+            </g>
+            <g class="svg-sub" fill="var(--muted)" text-anchor="middle">
+              <text x="210" y="282">source of truth</text>
+              <text x="440" y="282">retries with backoff</text>
+              <text x="670" y="282">one row appended</text>
+            </g>
+            <g stroke="currentColor" stroke-width="1.4" marker-end="url(#ar)" fill="none">
+              <line x1="307" y1="270" x2="341" y2="270"/>
+              <line x1="537" y1="270" x2="571" y2="270"/>
+            </g>
+            <text class="svg-arrowlabel" x="324" y="260" fill="var(--muted)" text-anchor="middle">queued</text>
+            <text class="svg-arrowlabel" x="554" y="260" fill="var(--muted)" text-anchor="middle">when online</text>
+          </svg>
+        </div>
+        <figcaption>Everything left of the confirm step is a suggestion; everything right of it is a fact you approved. The dashed box is the only part that needs a network, and nothing upstream of it ever waits on that.</figcaption>
+      </figure>
+
+      <div class="t-scroll">
+        <table>
+          <thead><tr><th>Layer</th><th>Choice</th><th>Why this one</th></tr></thead>
+          <tbody>
+            <tr><td>Language / UI</td><td>Kotlin, Jetpack Compose, Material 3</td><td>The confirm screen is mostly custom digit widgets; Compose makes those cheap.</td></tr>
+            <tr><td>Camera</td><td>CameraX <code>Preview</code> + <code>ImageAnalysis</code> + <code>ImageCapture</code></td><td>One API gives both the live analysis stream and the archival still.</td></tr>
+            <tr><td>OCR</td><td>ML Kit Text Recognition v2, bundled model</td><td>Offline, no key, no per-read cost. Bundling adds a few MB and removes the first-run download.</td></tr>
+            <tr><td>Local store</td><td>Room</td><td>The reading exists the moment you tap Save, network or not.</td></tr>
+            <tr><td>Sync</td><td>WorkManager <code>CoroutineWorker</code>, network constraint, exponential backoff</td><td>Survives app kill and reboot. The right tool for "this must eventually happen".</td></tr>
+            <tr><td>Sheets</td><td>Apps Script web app <span class="pill pick">start here</span> or Sheets REST v4</td><td>See <a href="#sheets">Sheets sync</a> &mdash; the two paths differ a lot in setup cost.</td></tr>
+            <tr><td>DI</td><td>Manual constructor wiring</td><td>Roughly six objects. Hilt would be more ceremony than the app.</td></tr>
+            <tr><td>Min SDK</td><td>26</td><td>Covers effectively every live device and avoids desugaring gymnastics.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="sec" id="ocr">
+      <h2>Reading the drums</h2>
+      <p class="sec-note">The corrected pipeline, after measurement</p>
+
+      <p>The measurements rewrote three of the five stages I originally proposed. What survives is simpler than what I started with, because most of the image processing turned out to be actively harmful.</p>
+
+      <ol class="steps">
+        <li>
+          <h4>Crop to the guide rectangle, and rotate</h4>
+          <p>Only pixels inside the guide reach the recognizer. This is the single highest-value step: it removes the serial number, "PA 15208", "GALLONS" and the dial numerals, all of which the OCR otherwise offers as candidate readings. The guide is rotatable and its angle is remembered, because your meter reads vertically in the crawlspace.</p>
+        </li>
+        <li>
+          <h4>Upscale about 2&times;, and do nothing else</h4>
+          <p>No greyscale, no contrast stretch, no thresholding, no inversion. Every one of those made the recognizer return <em>nothing</em> on your register, because its two halves have opposite polarity and any threshold that rescues one destroys the other. 5&times; upscaling was also worse than 2&times;.</p>
+        </li>
+        <li>
+          <h4>Recognize five frames</h4>
+          <p><code>ImageAnalysis</code> is already producing frames; bank the five around the shutter press. Between frames your hand moves a millimetre and the recognizer makes different mistakes, which is what makes them cancel.</p>
+        </li>
+        <li>
+          <h4>Reassemble fragments, then vote per position</h4>
+          <p>Frames often come back split &mdash; <code>324</code> and <code>442</code> rather than <code>324442</code>. Sort the pieces by x-position and concatenate rather than discarding them; on the jitter test that recovers roughly half the frames the naive filter threw away. Then vote position by position, <strong>with agreement measured against frames attempted</strong>.</p>
+        </li>
+        <li>
+          <h4>Prefill only what earned it</h4>
+          <p>Positions below the agreement threshold are left blank rather than filled with a guess. On your meter that means five digits prefilled and the moving drum left to you &mdash; which is honest, and is also one keystroke.</p>
+        </li>
+      </ol>
+
+      <figure>
+        <div class="fig-box">
+          <svg viewBox="0 0 640 320" role="img" aria-label="Five OCR frames stacked in aligned columns. Two frames are fragmented or malformed. Five positions reach five out of five agreement; the sixth position disagrees and is left blank for the user to type.">
+            <text class="svg-band" x="8" y="16" fill="var(--muted)">Five frames, one shutter press &mdash; real output from your 24 Oct photo</text>
+
+            <g class="svg-sub" fill="var(--muted)" text-anchor="end">
+              <text x="128" y="55">frame 1</text>
+              <text x="128" y="80">frame 2</text>
+              <text x="128" y="105">frame 3</text>
+              <text x="128" y="130">frame 4</text>
+              <text x="128" y="155">frame 5</text>
+            </g>
+
+            <rect x="392" y="34" width="42" height="132" rx="3" fill="none" stroke="var(--warn)" stroke-width="1.3" stroke-dasharray="4 3"/>
+
+            <g class="svg-mono" fill="currentColor" text-anchor="middle">
+              <text x="160" y="55">3</text><text x="200" y="55">2</text><text x="240" y="55">4</text><text x="280" y="55">4</text><text x="320" y="55">4</text>
+              <text x="160" y="80">3</text><text x="200" y="80">2</text><text x="240" y="80">4</text><text x="280" y="80">4</text><text x="320" y="80">4</text>
+              <text x="160" y="105">3</text><text x="200" y="105">2</text><text x="240" y="105">4</text><text x="280" y="105">4</text><text x="320" y="105">4</text>
+              <text x="160" y="130">3</text><text x="200" y="130">2</text><text x="240" y="130">4</text><text x="280" y="130">4</text><text x="320" y="130">4</text>
+              <text x="160" y="155">3</text><text x="200" y="155">2</text><text x="240" y="155">4</text><text x="280" y="155">4</text><text x="320" y="155">4</text>
+            </g>
+            <g class="svg-mono" fill="var(--warn)" text-anchor="middle">
+              <text x="413" y="55">2</text>
+              <text x="413" y="80">0</text>
+              <text x="413" y="105">2</text>
+              <text x="413" y="130">&mdash;</text>
+              <text x="413" y="155">2</text>
+            </g>
+            <g class="svg-sub" fill="var(--muted)">
+              <text x="448" y="80">reassembled from 324 + 440</text>
+              <text x="448" y="130">frame dropped: bezel read as leading 1</text>
+            </g>
+
+            <line x1="140" y1="176" x2="600" y2="176" stroke="var(--line)" stroke-width="1"/>
+
+            <text class="svg-sub" x="128" y="200" fill="var(--muted)" text-anchor="end">agreement</text>
+            <g class="svg-sub" fill="var(--ok)" text-anchor="middle">
+              <text x="160" y="200">5/5</text><text x="200" y="200">5/5</text><text x="240" y="200">5/5</text>
+              <text x="280" y="200">5/5</text><text x="320" y="200">5/5</text>
+            </g>
+            <text class="svg-sub" x="413" y="200" fill="var(--warn)" text-anchor="middle">3/5</text>
+            <text class="svg-sub" x="448" y="200" fill="var(--muted)">&larr; denominator is 5, not 4</text>
+
+            <text class="svg-sub" x="128" y="250" fill="var(--muted)" text-anchor="end">prefilled</text>
+            <g class="svg-mono" fill="currentColor" text-anchor="middle">
+              <text x="160" y="251">3</text><text x="200" y="251">2</text><text x="240" y="251">4</text><text x="280" y="251">4</text><text x="320" y="251">4</text>
+            </g>
+            <rect x="396" y="230" width="34" height="30" rx="3" fill="none" stroke="var(--warn)" stroke-width="1.8"/>
+            <text class="svg-sub" x="446" y="251" fill="var(--warn)">left blank and focused &mdash; below threshold, so not guessed</text>
+
+            <text class="svg-sub" x="128" y="292" fill="var(--muted)" text-anchor="end">truth</text>
+            <g class="svg-mono" fill="var(--ok)" text-anchor="middle">
+              <text x="160" y="293">3</text><text x="200" y="293">2</text><text x="240" y="293">4</text><text x="280" y="293">4</text><text x="320" y="293">4</text>
+              <text x="413" y="293">4</text>
+            </g>
+            <text class="svg-sub" x="446" y="293" fill="var(--muted)">mid-roll between 4 and 5 &mdash; no OCR run got this</text>
+          </svg>
+        </div>
+        <figcaption>The corrected scheme prefills what five independent frames agreed on and refuses to guess the rest. The earlier version would have reported the wrong sixth digit as unanimous, because it divided by surviving frames instead of attempted ones.</figcaption>
+      </figure>
+
+      <p>The vote, with both fixes and fragment reassembly:</p>
+
+<pre><code><span class="kw">fun</span> vote(frames: List&lt;List&lt;Fragment&gt;&gt;, expect: Int, minFrames: Int = 3): RecognizedReading? {
+    <span class="cm">// A frame often arrives split ("324" + "442"). Rebuild it in x order</span>
+    <span class="cm">// instead of discarding it — that recovered ~half the dropped frames.</span>
+    <span class="kw">val</span> attempted = frames.size
+    <span class="kw">val</span> usable = frames
+        .map { f -&gt; f.sortedBy { it.boxLeft }.joinToString(<span class="st">""</span>) { it.text }.filter(Char::isDigit) }
+        .filter { it.length == expect }
+
+    <span class="cm">// Too few survivors means the framing failed, not that the digits are known.</span>
+    <span class="kw">if</span> (usable.size &lt; minFrames) <span class="kw">return</span> null
+
+    <span class="kw">val</span> digits = StringBuilder()
+    <span class="kw">val</span> agreement = mutableListOf&lt;Float&gt;()
+    <span class="kw">for</span> (i <span class="kw">in</span> 0 until expect) {
+        <span class="kw">val</span> counts = usable.groupingBy { it[i] }.eachCount()
+        <span class="kw">val</span> (digit, n) = counts.maxBy { it.value }
+        digits.append(digit)
+        <span class="cm">// Denominator is every frame we tried, so dropped frames lower confidence</span>
+        <span class="cm">// rather than silently raising it. This was the bug.</span>
+        agreement += n.toFloat() / attempted
+    }
+    <span class="kw">return</span> RecognizedReading(digits.toString(), agreement, <span class="st">"mlkit-v2"</span>)
+}</code></pre>
+
+      <p>And the interface it sits behind, so the engine stays replaceable:</p>
+
+<pre><code><span class="kw">interface</span> MeterRecognizer {
+    <span class="cm">/** Digits plus per-position agreement. Null means "I could not read this". */</span>
+    <span class="kw">suspend fun</span> read(frames: List&lt;Bitmap&gt;, expectedDigits: Int): RecognizedReading?
+}
+
+<span class="kw">data class</span> RecognizedReading(
+    <span class="kw">val</span> digits: String,           <span class="cm">// "324442"</span>
+    <span class="kw">val</span> agreement: List&lt;Float&gt;,   <span class="cm">// per position, over frames attempted</span>
+    <span class="kw">val</span> engine: String
+)
+
+<span class="cm">// Only positions at or above this get prefilled. Everything else stays blank.</span>
+<span class="kw">const val</span> PREFILL_THRESHOLD = 0.8f</code></pre>
+
+      <div class="note">
+        <span class="note-label">A constraint worth exploiting later</span>
+        <p>The app knows your previous reading, and your meter moves roughly 120 gallons a day. That bounds the next reading tightly &mdash; the leading four digits are nearly always predictable. Scoring OCR candidates against that range would catch exactly the failure seen on the Master Meter photo, where the recognizer returned a serial number as the reading. Worth building once the basic loop is proven, not before.</p>
+      </div>
+    </section>
+
+    <section class="sec" id="screens">
+      <h2>Screens</h2>
+      <p class="sec-note">Three, and a settings page you visit twice</p>
+
+      <figure>
+        <div class="fig-box">
+          <svg viewBox="0 0 780 452" role="img" aria-label="Three phone wireframes: a capture screen with a rotatable guide rectangle over the register, a confirm screen with five prefilled digits and one blank focused digit, and a history list with per-row sync status.">
+            <g fill="var(--surface)" stroke="currentColor" stroke-width="1.2">
+              <rect x="280" y="8" width="220" height="392" rx="18"/>
+              <rect x="540" y="8" width="220" height="392" rx="18"/>
+            </g>
+
+            <rect x="20" y="8" width="220" height="392" rx="18" fill="var(--drum-dark)" stroke="currentColor" stroke-width="1.2"/>
+            <text class="svg-sub" x="130" y="34" fill="var(--drum-lt)" text-anchor="middle" opacity=".7">line up the register</text>
+            <rect x="44" y="150" width="172" height="62" rx="4" fill="none" stroke="var(--accent)" stroke-width="2" stroke-dasharray="7 5"/>
+            <g stroke="var(--accent)" stroke-width="2.4" fill="none">
+              <path d="M44 166 L44 150 L60 150"/><path d="M200 150 L216 150 L216 166"/>
+              <path d="M216 196 L216 212 L200 212"/><path d="M60 212 L44 212 L44 196"/>
+            </g>
+            <text class="svg-mono" x="130" y="188" fill="var(--drum-lt)" text-anchor="middle" opacity=".5">32444_</text>
+            <g stroke="var(--accent)" stroke-width="1.6" fill="none">
+              <path d="M182 128 a 14 14 0 1 1 -8 -12"/><polygon points="176,112 168,122 180,124" fill="var(--accent)" stroke="none"/>
+            </g>
+            <text class="svg-sub" x="130" y="240" fill="var(--accent)" text-anchor="middle">rotate guide &#8635;</text>
+            <circle cx="130" cy="344" r="26" fill="none" stroke="var(--drum-lt)" stroke-width="2.5"/>
+            <circle cx="130" cy="344" r="20" fill="var(--drum-lt)"/>
+            <text class="svg-label" x="130" y="424" fill="currentColor" text-anchor="middle">Capture</text>
+            <text class="svg-sub" x="130" y="442" fill="var(--muted)" text-anchor="middle">opens here, every time</text>
+
+            <rect x="296" y="24" width="188" height="46" rx="4" fill="var(--drum-dark)"/>
+            <text class="svg-mono" x="390" y="53" fill="var(--drum-lt)" text-anchor="middle" font-size="15">324444</text>
+            <text class="svg-sub" x="296" y="90" fill="var(--muted)">Reading</text>
+            <g fill="var(--surface2)" stroke="currentColor" stroke-width="1">
+              <rect x="296" y="98" width="28" height="34" rx="3"/>
+              <rect x="328" y="98" width="28" height="34" rx="3"/>
+              <rect x="360" y="98" width="28" height="34" rx="3"/>
+              <rect x="392" y="98" width="28" height="34" rx="3"/>
+              <rect x="424" y="98" width="28" height="34" rx="3"/>
+            </g>
+            <rect x="456" y="96" width="28" height="38" rx="3" fill="var(--surface)" stroke="var(--warn)" stroke-width="2.2"/>
+            <g class="svg-mono" fill="currentColor" text-anchor="middle" font-size="14">
+              <text x="310" y="121">3</text><text x="344" y="121">2</text><text x="376" y="121">4</text>
+              <text x="408" y="121">4</text><text x="440" y="121">4</text>
+            </g>
+            <line x1="470" y1="106" x2="470" y2="124" stroke="var(--warn)" stroke-width="1.6"/>
+            <text class="svg-sub" x="296" y="150" fill="var(--warn)">last drum is mid-roll &mdash; read it yourself</text>
+
+            <line x1="296" y1="166" x2="484" y2="166" stroke="var(--line)"/>
+            <text class="svg-sub" x="296" y="188" fill="var(--muted)">Date</text>
+            <text class="svg-sub" x="484" y="188" fill="currentColor" text-anchor="end">31 Aug 2026</text>
+            <text class="svg-sub" x="296" y="212" fill="var(--muted)">Since 19 Oct</text>
+            <text class="svg-sub" x="484" y="212" fill="currentColor" text-anchor="end">+536 &middot; 107/day</text>
+            <text class="svg-sub" x="296" y="236" fill="var(--muted)">Note</text>
+            <line x1="340" y1="240" x2="484" y2="240" stroke="var(--line)" stroke-dasharray="3 3"/>
+            <rect x="296" y="330" width="188" height="42" rx="5" fill="var(--accent)"/>
+            <text class="svg-label" x="390" y="356" fill="var(--surface)" text-anchor="middle">Save reading</text>
+            <text class="svg-label" x="390" y="424" fill="currentColor" text-anchor="middle">Confirm</text>
+            <text class="svg-sub" x="390" y="442" fill="var(--muted)" text-anchor="middle">the only screen you must touch</text>
+
+            <text class="svg-label" x="556" y="42" fill="currentColor">Readings</text>
+            <g stroke="var(--line)"><line x1="556" y1="56" x2="744" y2="56"/></g>
+            <g class="svg-sub" fill="currentColor">
+              <text x="576" y="80">24 Oct 21</text><text x="744" y="80" text-anchor="end" class="svg-mono">324444</text>
+              <text x="576" y="118">19 Oct 21</text><text x="744" y="118" text-anchor="end" class="svg-mono">323908</text>
+              <text x="576" y="156">01 Apr 21</text><text x="744" y="156" text-anchor="end" class="svg-mono">295607</text>
+              <text x="576" y="194">13 Jan 21</text><text x="744" y="194" text-anchor="end" class="svg-mono">290986</text>
+            </g>
+            <g class="svg-sub" fill="var(--muted)">
+              <text x="576" y="96">+536 &middot; 107/day</text>
+              <text x="576" y="134">+28,301 &middot; 145/day</text>
+              <text x="576" y="172">+4,621 &middot; 59/day</text>
+              <text x="576" y="210">meter reading</text>
+            </g>
+            <circle cx="564" cy="76" r="4" fill="var(--warn)"/>
+            <circle cx="564" cy="114" r="4" fill="var(--ok)"/>
+            <circle cx="564" cy="152" r="4" fill="var(--ok)"/>
+            <circle cx="564" cy="190" r="4" fill="var(--ok)"/>
+            <g stroke="var(--line-soft)">
+              <line x1="556" y1="104" x2="744" y2="104"/>
+              <line x1="556" y1="142" x2="744" y2="142"/>
+              <line x1="556" y1="180" x2="744" y2="180"/>
+            </g>
+            <text class="svg-sub" x="556" y="246" fill="var(--warn)">&#9679; queued &mdash; will sync on wifi</text>
+            <text class="svg-label" x="650" y="424" fill="currentColor" text-anchor="middle">History</text>
+            <text class="svg-sub" x="650" y="442" fill="var(--muted)" text-anchor="middle">audit, edit, export</text>
+          </svg>
+        </div>
+        <figcaption>History is populated with readings taken from your own photos, which is also the fastest way to seed the app: the first four rows above came from the archive you already have.</figcaption>
+      </figure>
+
+      <div class="grid2">
+        <div class="card">
+          <h3>Capture</h3>
+          <p>Full-bleed viewfinder, torch toggle, one shutter, and a guide rectangle you can rotate as well as resize. Set once against your meter's actual orientation, then remembered.</p>
+        </div>
+        <div class="card">
+          <h3>Confirm</h3>
+          <p>Digits are individual boxes, not a text field. The moving drum's box is focused on arrival with the numeric keypad already up, so the common case is: glance, one key, Save.</p>
+        </div>
+        <div class="card">
+          <h3>History</h3>
+          <p>Date, reading, change, gallons per day, and a sync dot. Tap a row to see its original photograph &mdash; the reason the photo is archived at all.</p>
+        </div>
+        <div class="card">
+          <h3>Settings</h3>
+          <p>Sheet destination, drum count, whether a trailing painted zero is ignored, the plausible daily-use band, and a "meter replaced" action that resets the monotonic check.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="sec" id="data">
+      <h2>Data model</h2>
+      <p class="sec-note">One local table, one sheet layout that keeps its own formulas</p>
+
+      <p>The local record keeps more than the spreadsheet needs, deliberately &mdash; the extra fields are what let you answer "why does this number look wrong?" later without guessing.</p>
+
+<pre><code><span class="kw">@Entity</span>(tableName = <span class="st">"readings"</span>)
+<span class="kw">data class</span> Reading(
+    <span class="kw">@PrimaryKey val</span> id: String,     <span class="cm">// UUID; doubles as the sheet's idempotency key</span>
+    <span class="kw">val</span> readingDate: String,        <span class="cm">// "2026-08-31" local date; editable</span>
+    <span class="kw">val</span> capturedAtUtc: Long,        <span class="cm">// epoch millis; never edited</span>
+    <span class="kw">val</span> value: Long,                <span class="cm">// the six drums, painted zero excluded</span>
+    <span class="kw">val</span> meterId: String,            <span class="cm">// "rockwell-3/4-t04" — resets the monotonic check</span>
+    <span class="kw">val</span> ocrRaw: String?,            <span class="cm">// what the recognizer actually returned</span>
+    <span class="kw">val</span> minAgreement: Float?,       <span class="cm">// lowest per-digit agreement, 0..1</span>
+    <span class="kw">val</span> corrected: Boolean,         <span class="cm">// did you change a prefilled digit?</span>
+    <span class="kw">val</span> photoPath: String,          <span class="cm">// app-private storage</span>
+    <span class="kw">val</span> note: String,
+    <span class="kw">val</span> sync: SyncState             <span class="cm">// QUEUED | SYNCING | SYNCED | FAILED</span>
+)</code></pre>
+
+      <p><code>meterId</code> exists because your history already spans a meter change. Without it, the first reading on a new unit trips the monotonic check and looks like a catastrophic misread; with it, the app knows to compare only within a run.</p>
+
+      <p>Keeping <code>capturedAtUtc</code> separate from <code>readingDate</code> matters more than it looks. You will occasionally photograph the meter on Sunday and save it on Monday, or fix a date you fat-fingered. The capture instant is forensic; the reading date is editorial.</p>
+
+      <h3>The sheet</h3>
+      <p>The app writes six columns and nothing else. Everything derived is a formula that lives in the sheet, so it stays correct when you edit a row by hand &mdash; and so the app never has to recompute history.</p>
+
+      <div class="t-scroll">
+        <table>
+          <thead><tr><th>Col</th><th>Header</th><th>Written by</th><th>Notes</th></tr></thead>
+          <tbody>
+            <tr><td class="num">A</td><td>id</td><td>app</td><td>UUID. Makes retries safe.</td></tr>
+            <tr><td class="num">B</td><td>date</td><td>app</td><td>A real date value, not text.</td></tr>
+            <tr><td class="num">C</td><td>reading</td><td>app</td><td>Six drums, gallons.</td></tr>
+            <tr><td class="num">D</td><td>meter</td><td>app</td><td>Which unit produced it.</td></tr>
+            <tr><td class="num">E</td><td>source</td><td>app</td><td><code>ocr</code> or <code>corrected</code> &mdash; lets you audit how much the OCR is actually earning.</td></tr>
+            <tr><td class="num">F</td><td>note</td><td>app</td><td>Usually empty.</td></tr>
+            <tr><td class="num">G</td><td>change</td><td>formula</td><td>Gallons since previous row.</td></tr>
+            <tr><td class="num">H</td><td>days</td><td>formula</td><td>Elapsed days.</td></tr>
+            <tr><td class="num">I</td><td>gal/day</td><td>formula</td><td>The number you actually care about.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p>Put these three in <code>G3</code>, <code>H3</code> and <code>I3</code> once. They spill down forever and need no maintenance as rows arrive:</p>
+
+<pre><code>G3: =ARRAYFORMULA(IF(C3:C="","", IF(D3:D&lt;&gt;D2:D, "new meter", C3:C - C2:C)))
+H3: =ARRAYFORMULA(IF(B3:B="","", B3:B - B2:B))
+I3: =ARRAYFORMULA(IF(B3:B="","", IF(D3:D&lt;&gt;D2:D, "", (C3:C - C2:C) / (B3:B - B2:B))))</code></pre>
+
+      <p>The <code>D3:D&lt;&gt;D2:D</code> guard is what stops a meter swap from rendering as a nonsensical negative change &mdash; the same problem <code>meterId</code> solves on the phone.</p>
+    </section>
+
+    <section class="sec" id="sheets">
+      <h2>Sheets sync</h2>
+      <p class="sec-note">Two viable paths, and they are not close in setup cost</p>
+
+      <div class="grid2">
+        <div class="card">
+          <h3>Apps Script web app <span class="pill pick">recommended</span></h3>
+          <p>Twenty lines of JavaScript bound to your spreadsheet, deployed as a web endpoint. The app sends a JSON <code>POST</code>. No OAuth, no consent screen, no Google Cloud project, no app verification.</p>
+        </div>
+        <div class="card">
+          <h3>Sheets REST API v4</h3>
+          <p>Proper OAuth via Credential Manager and <code>AuthorizationClient</code>, a Cloud project, an OAuth client tied to your signing certificate, and a consent screen. Correct, and considerably more work.</p>
+        </div>
+      </div>
+
+      <p>For an app with exactly one user writing to exactly one spreadsheet, the Apps Script path is the right call. It moves all the credential handling into a URL you paste into settings, and it lets you change the sheet's shape later without touching the APK.</p>
+
+<pre><code><span class="kw">const</span> SHEET_ID = <span class="st">'1AbC…'</span>;
+<span class="kw">const</span> SECRET   = <span class="st">'paste-a-long-random-string'</span>;
+
+<span class="kw">function</span> doPost(e) {
+  <span class="kw">const</span> body = JSON.parse(e.postData.contents);
+  <span class="kw">if</span> (body.secret !== SECRET) <span class="kw">return</span> json({ ok: <span class="kw">false</span>, error: <span class="st">'bad secret'</span> });
+
+  <span class="kw">const</span> sheet = SpreadsheetApp.openById(SHEET_ID).getSheetByName(<span class="st">'Readings'</span>);
+  <span class="kw">const</span> ids = sheet.getRange(<span class="st">'A:A'</span>).getValues().flat().filter(String);
+
+  <span class="cm">// The phone retries anything it didn't see succeed — including writes that did.</span>
+  <span class="kw">if</span> (ids.indexOf(body.id) !== -1) <span class="kw">return</span> json({ ok: <span class="kw">true</span>, duplicate: <span class="kw">true</span> });
+
+  <span class="cm">// NOT appendRow(): the spilled formulas in G:I count as content, so appendRow</span>
+  <span class="cm">// would land below them. Column A is the only honest row counter here.</span>
+  <span class="kw">const</span> row = ids.length + 1;
+  sheet.getRange(row, 1, 1, 6).setValues([[
+    body.id,
+    <span class="kw">new</span> Date(body.readingDate + <span class="st">'T12:00:00'</span>),  <span class="cm">// noon dodges DST edges</span>
+    body.value,
+    body.meterId,
+    body.corrected ? <span class="st">'corrected'</span> : <span class="st">'ocr'</span>,
+    body.note || <span class="st">''</span>
+  ]]);
+  <span class="kw">return</span> json({ ok: <span class="kw">true</span> });
+}
+
+<span class="kw">function</span> json(obj) {
+  <span class="kw">return</span> ContentService.createTextOutput(JSON.stringify(obj))
+    .setMimeType(ContentService.MimeType.JSON);
+}</code></pre>
+
+      <div class="note caution">
+        <span class="note-label">Know what the secret is</span>
+        <p>Deployed as "anyone can access", that URL plus the shared string is effectively a bearer token, and anything shipped in an APK can be extracted. For a personal app writing to your own well log this is a fine trade &mdash; the worst case is someone appending junk to a spreadsheet you can undo. Keep the URL out of any public repo, and if you ever publish the app, move to the OAuth path.</p>
+      </div>
+
+      <p>If you'd rather do it properly from the start, the REST equivalent is a single authenticated call &mdash; the work is all in obtaining the token, not in spending it:</p>
+
+<pre><code>POST https://sheets.googleapis.com/v4/spreadsheets/{sheetId}/values/Readings!A:F:append
+     ?valueInputOption=USER_ENTERED&amp;insertDataOption=INSERT_ROWS
+Authorization: Bearer {token}    <span class="cm">// scope: .../auth/spreadsheets</span>
+
+{ "values": [["<span class="st">a3f1…</span>", "<span class="st">2021-10-24</span>", 324444, "<span class="st">rockwell-t04</span>", "<span class="st">corrected</span>", ""]] }</code></pre>
+
+      <p><code>USER_ENTERED</code> is the important flag: it makes Sheets parse <code>2021-10-24</code> into a real date the way it would if you had typed it, rather than storing a string that silently breaks column H's arithmetic.</p>
+    </section>
+
+    <section class="sec" id="offline">
+      <h2>Offline queue</h2>
+      <p class="sec-note">Because a crawlspace is where signal goes to die</p>
+
+      <p>The save button never touches the network. It writes to Room, enqueues a worker, and returns you to the viewfinder. Everything after that is the system's problem.</p>
+
+      <figure>
+        <div class="fig-box">
+          <svg viewBox="0 0 640 170" role="img" aria-label="A reading moves from queued to syncing to synced. A failed sync returns to queued after exponential backoff, and after repeated failures is surfaced in the history list.">
+            <defs>
+              <marker id="ar2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+                <path d="M 0 0 L 10 5 L 0 10 z" fill="currentColor"/>
+              </marker>
+            </defs>
+            <g fill="var(--surface2)" stroke="currentColor" stroke-width="1">
+              <rect x="20"  y="30" width="130" height="44" rx="22"/>
+              <rect x="230" y="30" width="130" height="44" rx="22"/>
+            </g>
+            <rect x="440" y="30" width="130" height="44" rx="22" fill="var(--surface)" stroke="var(--ok)" stroke-width="1.6"/>
+            <rect x="230" y="112" width="130" height="44" rx="22" fill="var(--surface)" stroke="var(--crit)" stroke-width="1.4"/>
+
+            <g class="svg-label" text-anchor="middle">
+              <text x="85"  y="58" fill="currentColor">QUEUED</text>
+              <text x="295" y="58" fill="currentColor">SYNCING</text>
+              <text x="505" y="58" fill="var(--ok)">SYNCED</text>
+              <text x="295" y="140" fill="var(--crit)">FAILED</text>
+            </g>
+
+            <g stroke="currentColor" stroke-width="1.4" fill="none" marker-end="url(#ar2)">
+              <line x1="152" y1="52" x2="226" y2="52"/>
+              <line x1="362" y1="52" x2="436" y2="52"/>
+              <line x1="295" y1="76" x2="295" y2="108"/>
+            </g>
+            <path d="M 230 134 L 85 134 L 85 78" stroke="currentColor" stroke-width="1.4" fill="none" marker-end="url(#ar2)"/>
+
+            <g class="svg-arrowlabel" fill="var(--muted)" text-anchor="middle">
+              <text x="189" y="44">network up</text>
+              <text x="399" y="44">ok or duplicate</text>
+              <text x="352" y="96" text-anchor="start">timeout / 5xx</text>
+              <text x="157" y="128">exponential backoff</text>
+            </g>
+            <text class="svg-arrowlabel" x="380" y="140" fill="var(--muted)">after 5 tries, an amber dot appears in History</text>
+          </svg>
+        </div>
+        <figcaption>A duplicate response is treated as success, which is what makes retrying safe: the phone cannot distinguish "the write failed" from "the write succeeded and the reply was lost", so the server decides, using the UUID.</figcaption>
+      </figure>
+
+      <p>The worker takes every <code>QUEUED</code> row in date order, posts each, and marks results. WorkManager's <code>NetworkType.CONNECTED</code> constraint means it doesn't wake up until there's a connection, and its backoff policy handles the flaky-signal case without any retry code of your own.</p>
+    </section>
+
+    <section class="sec" id="rules">
+      <h2>Validation rules</h2>
+      <p class="sec-note">Cheap checks that catch what the OCR gets wrong</p>
+
+      <p>These run on the confirm screen, live, as you edit. Only the first is a hard stop &mdash; the rest warn and let you proceed, because a real meter occasionally does something surprising and the app should never be the reason a true reading goes unlogged.</p>
+
+      <div class="t-scroll">
+        <table>
+          <thead><tr><th>Rule</th><th>Check</th><th>What you see</th></tr></thead>
+          <tbody>
+            <tr>
+              <td>Digit count</td>
+              <td>All six boxes filled</td>
+              <td>Save disabled until complete. The moving drum is never auto-filled, so this is a real gate, not a formality.</td>
+            </tr>
+            <tr>
+              <td>Monotonic</td>
+              <td><code>value &ge; </code> previous reading <em>on the same meter</em></td>
+              <td>Red: "meters don't run backwards &mdash; check the leading digits." Cleared automatically after a meter swap.</td>
+            </tr>
+            <tr>
+              <td>Rate plausible</td>
+              <td>Gallons &divide; elapsed days inside your band</td>
+              <td>Amber with the computed rate spelled out. Your history runs roughly 60&ndash;150 gal/day, so the default band is 20&ndash;600 and you narrow it later.</td>
+            </tr>
+            <tr>
+              <td>Leading digits</td>
+              <td>High-order drums changed more than the rate allows</td>
+              <td>Amber on the specific digit. This is the check that would have caught <code>1041993</code> being offered when the register said <code>0000129</code>.</td>
+            </tr>
+            <tr>
+              <td>Duplicate date</td>
+              <td>A row already exists for this date</td>
+              <td>Choice: replace that row, or add anyway.</td>
+            </tr>
+            <tr>
+              <td>Stale date</td>
+              <td>Reading date more than 7 days before capture</td>
+              <td>Amber confirm &mdash; usually means the date picker was left on an old value.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="sec" id="privacy">
+      <h2>Permissions</h2>
+      <p class="sec-note">One dangerous permission, and it's the obvious one</p>
+
+      <ul>
+        <li><strong><code>CAMERA</code></strong> &mdash; the only runtime permission the app requests.</li>
+        <li><strong><code>INTERNET</code></strong> &mdash; install-time, for the sheet append.</li>
+        <li><strong>No location.</strong> Nothing about the app needs it, and a photo of your wellhead with coordinates attached is not a thing to create casually.</li>
+        <li><strong>No storage permission.</strong> Photos live in app-private <code>filesDir</code>. They don't appear in your gallery, and they're removed with the app.</li>
+      </ul>
+
+      <p>The photographs never leave the phone unless you explicitly enable archiving them to Drive, which is a later, optional feature. The only data crossing the network is six short fields per reading.</p>
+    </section>
+
+    <section class="sec" id="build">
+      <h2>Build order</h2>
+      <p class="sec-note">Deliberately OCR-last, and the measurements make that ordering look better, not worse</p>
+
+      <p>The riskiest component is the one whose value is now measured rather than assumed: OCR saves you five keystrokes out of six, not six out of six. That is worth having, and it is emphatically not worth blocking the app on. So it goes last, on top of something already useful.</p>
+
+      <ol class="steps">
+        <li>
+          <h4>The loop, with typing</h4>
+          <p>Camera, capture, confirm screen, Room, history list. You type all six digits. Already a real improvement: framed photo, prefilled date, one screen, no app switching. This is also where you find out whether the ergonomics work in the crawlspace.</p>
+        </li>
+        <li>
+          <h4>Backfill from your archive</h4>
+          <p>An import that reads the dates out of your existing filenames &mdash; <code>PXL_20211024_195922840</code> is already an ISO date &mdash; shows you the photo and takes the number. Fifteen photos, a few minutes, and the sheet starts with four years of history instead of one row.</p>
+        </li>
+        <li>
+          <h4>Sheets, end to end</h4>
+          <p>Apps Script endpoint, WorkManager sync, the state machine above. At this point the chore is genuinely solved &mdash; everything after is speed.</p>
+        </li>
+        <li>
+          <h4>OCR</h4>
+          <p>Rotatable ROI crop, 2&times; upscale, five-frame vote with fragment reassembly, threshold prefill. Ship it behind a settings toggle so you can turn it off, and so you can measure it honestly against the <code>source</code> column.</p>
+        </li>
+        <li>
+          <h4>Validation and comforts</h4>
+          <p>The rules table, history-constrained candidate scoring, quick-settings tile, CSV export, optional Drive photo archive.</p>
+        </li>
+      </ol>
+
+      <div class="note">
+        <span class="note-label">A useful side effect</span>
+        <p>Milestone 1 stores each photo alongside a hand-typed, definitely-correct number. Using the app for a few weeks builds a labelled test set of your meter in your lighting &mdash; so by milestone 4 you can measure the recognizer's real accuracy on your register instead of extrapolating from the fifteen photos I had.</p>
+      </div>
+    </section>
+
+    <section class="sec" id="open">
+      <h2>Open questions</h2>
+      <p class="sec-note">The photos answered most of the original list. These are what's left</p>
+
+      <ul>
+        <li><strong>Is the trailing painted zero part of your recorded number?</strong> I've assumed not: reading six drums gives roughly 120 gal/day across your history, which is right for a household, while including the zero gives 1,200. Worth confirming, because it's a factor of ten in every row.</li>
+        <li><strong>What happened with the Master Meter?</strong> Your July 2019 photo shows a different, newly installed unit reading 0000129, but the Rockwell continues in your later photos. Is that a second meter, a replacement that was reverted, or a different property? It determines whether <code>meterId</code> needs to be a picker on the capture screen or just a settings value.</li>
+        <li><strong>Your existing spreadsheet's layout.</strong> The app should append to the sheet you already have rather than make you migrate. Paste the current header row and the column mapping adjusts to match it.</li>
+        <li><strong>Do you want the readings backfilled now?</strong> I can extract the numbers from all fifteen photos and hand you a CSV keyed by the dates in the filenames &mdash; that's useful whether or not the app ever gets built.</li>
+      </ul>
+    </section>
+
+    <footer>
+      <p>Drumroll &mdash; a proposed name, easily changed. Design draft, 31 August 2026. OCR figures measured against 15 photographs of the meter, Nov 2017 &ndash; Oct 2021, using Apple's Vision text recognizer as a stand-in for ML Kit Text Recognition v2.</p>
+    </footer>
+
+  </main>
+</div>
