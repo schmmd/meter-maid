@@ -7,7 +7,12 @@ package com.schmmd.drumroll.data
  * moves, so a reading of 3244440 is six OCR'd digits with a zero appended.
  */
 data class MeterConfig(
-    val meterId: String = ROCKWELL,
+    /**
+      * Free text, blank by default. It exists to separate one physical meter's series
+      * from the next, so the only thing that matters is that it changes when the meter
+      * does — there is nothing to gain from inventing a name for a well with one meter.
+      */
+    val meterId: String = "",
     val drumCount: Int = 6,
     val trailingZeros: Int = 1,
     /** Plausible gallons/day; anything outside this warns but does not block. */
@@ -29,7 +34,6 @@ data class MeterConfig(
         value.toString().padStart(totalDigits, '0')
 
     companion object {
-        const val ROCKWELL = "rockwell-t04"
         private val POWERS = longArrayOf(1, 10, 100, 1000)
     }
 }

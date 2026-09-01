@@ -148,7 +148,7 @@ fun SettingsScreen(
             Button(onClick = {
                 onSaveMeter(
                     MeterConfig(
-                        meterId = meterId.trim().ifBlank { MeterConfig.ROCKWELL },
+                        meterId = meterId.trim(),
                         drumCount = drums.toIntOrNull() ?: 6,
                         trailingZeros = zeros.toIntOrNull()?.coerceIn(0, 3) ?: 1,
                         minPerDay = minDay.toDoubleOrNull() ?: 50.0,
