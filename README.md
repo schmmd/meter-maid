@@ -73,9 +73,8 @@ adb install -r app/build/outputs/apk/debug/app-debug.apk
 ## First run
 
 Grant camera access, then open Settings and pick a file to save to. Back on the capture
-screen, use the rotate button (↻) to match the guide rectangle to how the register
-actually sits in the crawlspace — half the archive photos have it running vertically.
-The angle is remembered.
+screen, use the flip button to turn the crop end-for-end when you are reading the
+register from the far side of the pit. The setting is remembered.
 
 ## Layout
 

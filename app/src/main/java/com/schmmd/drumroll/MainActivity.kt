@@ -71,7 +71,7 @@ private fun Root() {
         composable("capture") {
             CaptureScreen(
                 roi = settings.roi,
-                onRotateGuide = { vm.rotateGuide() },
+                onFlipGuide = { vm.flipGuide() },
                 onCaptured = vm::onCaptured,
                 onHistory = { nav.navigate("history") },
                 onSettings = { nav.navigate("settings") },

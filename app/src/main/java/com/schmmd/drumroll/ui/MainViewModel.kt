@@ -47,9 +47,14 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     private var pendingPhoto: File? = null
     private var busy = false
 
-    fun rotateGuide() = viewModelScope.launch {
+    /**
+      * Flips the crop end-for-end. A register read from the far side of the pit comes out
+      * upside down; it never comes out on its side, so 90 and 270 were only ever ways to
+      * get an unreadable crop.
+      */
+    fun flipGuide() = viewModelScope.launch {
         val roi = settings.value.roi
-        settingsStore.setRoi(roi.copy(rotationDegrees = (roi.rotationDegrees + 90) % 360))
+        settingsStore.setRoi(roi.copy(rotationDegrees = if (roi.rotationDegrees == 180) 0 else 180))
     }
 
     /**

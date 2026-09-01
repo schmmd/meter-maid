@@ -13,7 +13,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.History
-import androidx.compose.material.icons.filled.Rotate90DegreesCw
+import androidx.compose.material.icons.filled.FlipCameraAndroid
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -48,7 +48,7 @@ import java.util.concurrent.atomic.AtomicReference
 @Composable
 fun CaptureScreen(
     roi: Roi,
-    onRotateGuide: () -> Unit,
+    onFlipGuide: () -> Unit,
     onCaptured: (frames: List<Bitmap>) -> Unit,
     onHistory: () -> Unit,
     onSettings: () -> Unit,
@@ -170,8 +170,8 @@ fun CaptureScreen(
                 .padding(horizontal = 8.dp),
             horizontalArrangement = Arrangement.spacedBy(4.dp),
         ) {
-            IconButton(onClick = onRotateGuide) {
-                Icon(Icons.Default.Rotate90DegreesCw, "Rotate guide", tint = Color.White)
+            IconButton(onClick = onFlipGuide) {
+                Icon(Icons.Default.FlipCameraAndroid, "Flip guide", tint = Color.White)
             }
             IconButton(onClick = onHistory) {
                 Icon(Icons.Default.History, "History", tint = Color.White)

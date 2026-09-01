@@ -92,7 +92,8 @@ class SettingsStore(private val context: Context) {
                 top = this[K_ROI_T] ?: Roi().top,
                 width = this[K_ROI_W] ?: Roi().width,
                 height = this[K_ROI_H] ?: Roi().height,
-                rotationDegrees = this[K_ROI_ROT] ?: Roi().rotationDegrees,
+                // Only 0 and 180 are offered now; an older 90/270 snaps to upright.
+                rotationDegrees = if (this[K_ROI_ROT] == 180) 180 else 0,
             ),
             ocrEnabled = (this[K_OCR] ?: 1) == 1,
         )
