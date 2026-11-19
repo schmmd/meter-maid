@@ -52,10 +52,6 @@ class PpOcrRecognizer(context: Context) {
             return@withContext null
         }
 
-        // Every digit on the face, painted zeros included: the guide box always contains
-        // them and the recognizer has no way to know they never turn.
-        val cells = drumCount + trailingZeros
-
         val readings = frames.mapNotNull { frame ->
             val box = detect.detect(frame)
             if (box == null) {
@@ -76,12 +72,13 @@ class PpOcrRecognizer(context: Context) {
                 return@mapNotNull null
             }
 
-            val assigned = DrumAssignment.assign(decoded.hits, decoded.timesteps, cells)
-            val drums = assigned?.let { Vote.rotatingDrumsOf(it, drumCount, trailingZeros) }
+            val drums = DrumAssignment.rotatingDrums(
+                decoded.hits, decoded.timesteps, drumCount, trailingZeros,
+            )
             Log.i(
                 TAG,
                 "box=$box strip=${box.width()}x${box.height()} T=${decoded.timesteps} " +
-                    "raw='${decoded.raw}' assigned='$assigned' drums='$drums'",
+                    "raw='${decoded.raw}' drums='$drums'",
             )
             drums
         }

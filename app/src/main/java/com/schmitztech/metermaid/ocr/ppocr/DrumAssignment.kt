@@ -1,5 +1,7 @@
 package com.schmitztech.metermaid.ocr.ppocr
 
+import com.schmitztech.metermaid.ocr.Vote
+
 /** One character the recogniser emitted, at the CTC timestep it was emitted on. */
 data class CtcHit(val timestep: Int, val digit: Char, val confidence: Float)
 
@@ -20,6 +22,17 @@ object DrumAssignment {
 
     /** Weight on even spacing relative to recogniser confidence. Tuned on real frames. */
     const val SPACING_WEIGHT = 6.0
+
+    /**
+     * The rotating drums of one frame, whether or not the painted zeros made it into the
+     * strip. At 640x480 the detector box was loose enough to take in the dial's blue zero
+     * beside the register, which stood in for the painted zero; the tight box at 1080p
+     * holds the drums alone, and demanding one more character threw every frame away.
+     */
+    fun rotatingDrums(hits: List<CtcHit>, timesteps: Int, drumCount: Int, trailingZeros: Int): String? =
+        assign(hits, timesteps, drumCount + trailingZeros)
+            ?.let { Vote.rotatingDrumsOf(it, drumCount, trailingZeros) }
+            ?: assign(hits, timesteps, drumCount)
 
     /**
      * @param hits characters in emission order.
