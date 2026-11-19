@@ -11,7 +11,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 /**
- * PP-OCRv4, on device, through ONNX Runtime.
+ * PP-OCR on device through ONNX Runtime: the v4 mobile detector and the v5 mobile recogniser.
  *
  * Chosen after measuring three engines against photographs of this meter. ML Kit read
  * `045694` as `lölASI6E`; Tesseract with a digit whitelist returned `560` from a clean,

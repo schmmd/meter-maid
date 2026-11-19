@@ -9,7 +9,7 @@ data class RecognizedStrip(val hits: List<CtcHit>, val timesteps: Int) {
 }
 
 /**
- * Reads the register strip with PP-OCRv4 and returns each character with the CTC timestep
+ * Reads the register strip with PP-OCRv5 and returns each character with the CTC timestep
  * it was emitted at, which is what [DrumAssignment] needs to tell drums from separators.
  *
  * The character table is masked to digits before decoding. This is the whitelist ML Kit
@@ -83,7 +83,7 @@ class DigitRecognizer(private val models: PpOcrModels) {
     }
 
     private companion object {
-        /** PP-OCRv4 recognises a line at 48px tall, aspect preserved. */
+        /** PP-OCR recognises a line at 48px tall, aspect preserved. */
         const val HEIGHT = 48
     }
 }

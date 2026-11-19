@@ -8,7 +8,7 @@ import android.graphics.Bitmap
 import java.nio.FloatBuffer
 
 /**
- * The two PP-OCRv4 models, loaded from assets and kept for the life of the recognizer.
+ * The PP-OCRv4 detector and PP-OCRv5 recogniser, loaded from assets and kept for the life of the recognizer.
  *
  * Both take the same normalisation — (x/255 - 0.5) / 0.5, channels-first — and the
  * recogniser carries its own character table in the ONNX metadata rather than a
